@@ -94,7 +94,6 @@ def with_stop(counters: Counters, stop_event: Event) -> Counters:
 
 
 def main() -> None:
-    """TO-DO: add function doc here"""
     pass
 
 

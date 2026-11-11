@@ -20,7 +20,6 @@ class Weighted_Graph:
     """TO-DO: add function doc here"""
 
     def __init__(self, num_nodes, counter=None):
-        """TO-DO: add function doc here"""
         self.num_nodes = num_nodes
         self.graph = [ ]
         for i in range(num_nodes):
@@ -56,7 +55,6 @@ class Weighted_Graph:
             self.graph[i][j] = c
 
     def __str__(self):
-        """TO-DO: add function doc here"""
         result = "Num Nodes: %d\nNum Edges: %d\n" % (self.num_nodes, self.num_edges)
         for i in range(self.num_nodes):
             result += "Node %d: " % i
@@ -78,6 +76,7 @@ def floyd_warshall(my_graph, verbose=True, counter=None):
     does, so the node before j is parent[k][j]. That is the only change we need to remember routes.
     Runs in O(n^3). Set verbose=False to skip the matrix printed after every iteration.
     NOTE: if the graph has a negative cycle (has_negative_cycle(dist)), the parents are not meaningful"""
+
     num_nodes = my_graph.get_num_nodes()
     dist = [[my_graph.get_edge(i,j) for j in range(num_nodes)] for i in range(num_nodes)]
     # With no intermediate stops, the node before j on the path i -> j is i itself (if the edge exists)
@@ -148,7 +147,6 @@ def print_parents(parent):
     print(result)
 
 def make_test_one():
-    """TO-DO: add function doc here"""
     test_one = Weighted_Graph(7)
     test_one.add_undirected_edge(0, 1, 2)
     test_one.add_undirected_edge(0, 2, 4)
@@ -165,7 +163,6 @@ def make_test_one():
     return test_one
 
 def make_test_two():
-    """TO-DO: add function doc here"""
     test_two = Weighted_Graph(9)
     test_two.add_directed_edge(0,1,5)
     test_two.add_directed_edge(0,3,7)
@@ -188,7 +185,6 @@ def make_test_two():
     return test_two
 
 def make_test_three():
-    """TO-DO: add function doc here"""
     test_three = Weighted_Graph(7)
     test_three.add_directed_edge(0, 1, 5)
     test_three.add_directed_edge(0, 3, 6)
@@ -208,7 +204,6 @@ def make_test_three():
     return test_three
 
 def main():
-    """TO-DO: add function doc here"""
     print("This file will test the floyd warshall algorithm and the matrix representation of a graph in Python")
     # test_one = make_test_one()
     # print(test_one)

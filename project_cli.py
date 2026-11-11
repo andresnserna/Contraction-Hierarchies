@@ -42,7 +42,6 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """TO-DO: add function doc here"""
     parser = _parser()
     args = parser.parse_args(argv)
     if args.algo is not None and args.query != "apsp":

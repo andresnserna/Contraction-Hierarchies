@@ -30,10 +30,9 @@ class Counters:
 
 @dataclass(frozen=True)
 class Evacuation:
-    """using @dataclass so i don't need an _init heheheheheheheh
-    and frozen so the record is immutible.
-
-    a class im treating as a record holder (so data?), called upon by the _multi_source_evacuation() func
+    """
+    using @dataclass so i don't need an _init heheheheheheheh and frozen so the record is immutible. 
+    This is a class im treating as a record holder (so data?), called upon by the _multi_source_evacuation() func
     """
     zone_id: int
     shelter_id: int | None
@@ -77,9 +76,10 @@ def _multi_source_evacuation(network: RoadNetwork, *, excluded_road_ids: frozens
     tuple[Evacuation, ...],
     dict[int, int | None],
     dict[int, int | None],
-]:
-    # precondition: If there are no shelters, there is no destination to route anyone to.
+]:    
     """TO-DO: add function doc here"""
+
+    # precondition: If there are no shelters, there is no destination to route anyone to.
     if not network.shelters:
         raise ValueError("the instance has no shelters")
 

@@ -13,7 +13,7 @@ import heapq
 import random
 
 class Graph:
-    """TO-DO: add function doc here"""
+    """an implementation of a graph class using adjacency lists. for ease of searching we are using dictionaries for both node storage and edge storage. This greatly speeds up our searching for any individual edge. Both directed and undirected edges may be added into the graph. Directed edges may form cycles (earlier versions of this file only allowed DAGs). Undirected edges (by definition) always create a cycle. For either edge type, we will not allow multiple edges a -> b,"""
 
     def __init__(self):
         """Constructor for a weighted graph class (directed and/or undirected edges)
@@ -426,7 +426,6 @@ class Graph:
 
 
     def __str__(self):
-        """TO-DO: add function doc here"""
         result = ""
         for node in self.nodes:
             result += "Node %s: " % node
