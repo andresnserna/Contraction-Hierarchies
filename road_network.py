@@ -9,6 +9,8 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Node:
+    """TO-DO: add function doc here"""
+
     id: int
     name: str
     kind: str
@@ -17,6 +19,8 @@ class Node:
 
 @dataclass(frozen=True)
 class Road:
+    """TO-DO: add function doc here"""
+
     id: int
     u: int
     v: int
@@ -27,6 +31,8 @@ class Road:
 
 @dataclass(frozen=True)
 class Arc:
+    """TO-DO: add function doc here"""
+
     source: int
     target: int
     weight: int
@@ -35,6 +41,8 @@ class Arc:
 
 @dataclass
 class RoadNetwork:
+    """TO-DO: add function doc here"""
+
     nodes: dict[int, Node]
     roads: tuple[Road, ...]
 

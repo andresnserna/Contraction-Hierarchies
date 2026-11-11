@@ -13,6 +13,7 @@ import heapq
 import random
 
 class Graph:
+    """TO-DO: add function doc here"""
 
     def __init__(self):
         """Constructor for a weighted graph class (directed and/or undirected edges)

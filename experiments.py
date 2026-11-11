@@ -21,6 +21,8 @@ T = TypeVar("T")
 
 @dataclass(frozen=True)
 class TimedResult:
+    """TO-DO: add function doc here"""
+
     value: object | None
     seconds: float
     timed_out: bool = False

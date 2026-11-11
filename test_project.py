@@ -22,6 +22,8 @@ EDGES = INSTANCE / "edges.tsv"
 
 
 class ProjectQueryTests(unittest.TestCase):
+    """TO-DO: add function doc here"""
+
     @classmethod
     def setUpClass(cls) -> None:
         """TO-DO: add function doc here"""
@@ -78,9 +80,7 @@ class ProjectQueryTests(unittest.TestCase):
         self.assertEqual(floyd_result, dijkstra_result)
 
     def test_cli_outputs(self) -> None:
-        # Run the actual CLI on both shipped TSV datasets and compare its rows
-        # with the expected shelter assignments and all-pairs travel times.
-        """TO-DO: add function doc here"""
+        """Run the actual CLI on both shipped TSV datasets and compare its rows with the expected shelter assignments and all-pairs travel times."""
         for instance_name in ("tiny", "small"):
             with self.subTest(instance=instance_name):
                 instance = Path(__file__).parent / "data" / "instances" / instance_name
