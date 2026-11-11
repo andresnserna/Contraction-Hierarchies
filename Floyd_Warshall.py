@@ -19,6 +19,7 @@
 class Weighted_Graph:
 
     def __init__(self, num_nodes, counter=None):
+        """TO-DO: add function doc here"""
         self.num_nodes = num_nodes
         self.graph = [ ]
         for i in range(num_nodes):
@@ -28,30 +29,33 @@ class Weighted_Graph:
         self.num_edges = 0
 
     def get_num_nodes(self):
+        """TO-DO: add function doc here"""
         return self.num_nodes
     
     def get_edge(self, i, j):
+        """TO-DO: add function doc here"""
         if i > -1 and i < self.num_nodes and j > -1 and j < self.num_nodes:
             return self.graph[i][j]
         else:
             return -1234567890 # a clear sign there is a problem
         
-    # Adds the edges i -> j and j -> i, both with weight c (overwrites weights if they exist)
-    # Self loops (i == j) are ignored, they would overwrite the 0 on the diagonal
-    # NOTE: an undirected edge with a negative weight is a negative cycle (i -> j -> i)
     def add_undirected_edge(self, i, j, c):
+        """Adds the edges i -> j and j -> i, both with weight c (overwrites weights if they exist)
+        Self loops (i == j) are ignored, they would overwrite the 0 on the diagonal
+        NOTE: an undirected edge with a negative weight is a negative cycle (i -> j -> i)"""
         self.add_directed_edge(i, j, c)
         self.add_directed_edge(j, i, c)
 
-    # Adds the edge i -> j with weight c (overwrites the weight if the edge exists)
-    # Self loops (i == j) are ignored, they would overwrite the 0 on the diagonal
     def add_directed_edge(self, i, j, c):
+        """Adds the edge i -> j with weight c (overwrites the weight if the edge exists)
+        Self loops (i == j) are ignored, they would overwrite the 0 on the diagonal"""
         if i != j and i > -1 and i < self.num_nodes and j > -1 and j < self.num_nodes:
             if self.graph[i][j] == float('inf'):
                 self.num_edges += 1
             self.graph[i][j] = c
 
     def __str__(self):
+        """TO-DO: add function doc here"""
         result = "Num Nodes: %d\nNum Edges: %d\n" % (self.num_nodes, self.num_edges)
         for i in range(self.num_nodes):
             result += "Node %d: " % i
@@ -62,17 +66,17 @@ class Weighted_Graph:
         return result
 
 
-# Floyd Warshall: returns (dist, parent), two n x n matrices. my_graph is not modified.
-#   dist[i][j]   = length of the shortest path from i to j (float('inf') if there is no path)
-#   parent[i][j] = the node just before j on that shortest path (None if i == j or there is no path)
-# After the iteration for k, dist[i][j] is the shortest path from i to j that only uses
-# nodes 0..k as intermediate stops. Updating dist in place is safe: during iteration k,
-# row k and column k never change (dist[k][k] is 0 unless there is a negative cycle).
-# Whenever going through k is shorter, the path from i to j now ends the way the path from k to j
-# does, so the node before j is parent[k][j]. That is the only change we need to remember routes.
-# Runs in O(n^3). Set verbose=False to skip the matrix printed after every iteration.
-# NOTE: if the graph has a negative cycle (has_negative_cycle(dist)), the parents are not meaningful
 def floyd_warshall(my_graph, verbose=True, counter=None):
+    """Floyd Warshall: returns (dist, parent), two n x n matrices. my_graph is not modified.
+      dist[i][j]   = length of the shortest path from i to j (float('inf') if there is no path)
+      parent[i][j] = the node just before j on that shortest path (None if i == j or there is no path)
+    After the iteration for k, dist[i][j] is the shortest path from i to j that only uses
+    nodes 0..k as intermediate stops. Updating dist in place is safe: during iteration k,
+    row k and column k never change (dist[k][k] is 0 unless there is a negative cycle).
+    Whenever going through k is shorter, the path from i to j now ends the way the path from k to j
+    does, so the node before j is parent[k][j]. That is the only change we need to remember routes.
+    Runs in O(n^3). Set verbose=False to skip the matrix printed after every iteration.
+    NOTE: if the graph has a negative cycle (has_negative_cycle(dist)), the parents are not meaningful"""
     num_nodes = my_graph.get_num_nodes()
     dist = [[my_graph.get_edge(i,j) for j in range(num_nodes)] for i in range(num_nodes)]
     # With no intermediate stops, the node before j on the path i -> j is i itself (if the edge exists)
@@ -97,16 +101,16 @@ def floyd_warshall(my_graph, verbose=True, counter=None):
             print_matrix(dist)
     return dist, parent
 
-# Takes the distance matrix returned by floyd_warshall
-# A node whose shortest path to itself is below 0 lies on a negative cycle
 def has_negative_cycle(matrix):
+    """Takes the distance matrix returned by floyd_warshall
+    A node whose shortest path to itself is below 0 lies on a negative cycle"""
     return any(matrix[i][i] < 0 for i in range(len(matrix)))
 
-# Rebuilds a path from one row of the parent matrix: build_path(parent[source], source, target)
-# Starts at target and follows parents back until it reaches source
-# Returns the path as a list [source, ..., target], or None if target cannot be reached from source
-# (graph.py has a similar helper built into shortest_path)
 def build_path(parent, source, target):
+    """Rebuilds a path from one row of the parent matrix: build_path(parent[source], source, target)
+    Starts at target and follows parents back until it reaches source
+    Returns the path as a list [source, ..., target], or None if target cannot be reached from source
+    (graph.py has a similar helper built into shortest_path)"""
     path = [target]
     node = target
     while node != source:
@@ -119,6 +123,7 @@ def build_path(parent, source, target):
     return path
 
 def print_matrix(matrix):
+    """TO-DO: add function doc here"""
     result = ""
     for row in matrix:
         for val in row:
@@ -129,8 +134,8 @@ def print_matrix(matrix):
         result += "\n"
     print(result)
 
-# Prints the parent matrix. A dash means there is no parent
 def print_parents(parent):
+    """Prints the parent matrix. A dash means there is no parent"""
     result = ""
     for row in parent:
         for val in row:
@@ -142,6 +147,7 @@ def print_parents(parent):
     print(result)
 
 def make_test_one():
+    """TO-DO: add function doc here"""
     test_one = Weighted_Graph(7)
     test_one.add_undirected_edge(0, 1, 2)
     test_one.add_undirected_edge(0, 2, 4)
@@ -158,6 +164,7 @@ def make_test_one():
     return test_one
 
 def make_test_two():
+    """TO-DO: add function doc here"""
     test_two = Weighted_Graph(9)
     test_two.add_directed_edge(0,1,5)
     test_two.add_directed_edge(0,3,7)
@@ -180,6 +187,7 @@ def make_test_two():
     return test_two
 
 def make_test_three():
+    """TO-DO: add function doc here"""
     test_three = Weighted_Graph(7)
     test_three.add_directed_edge(0, 1, 5)
     test_three.add_directed_edge(0, 3, 6)
@@ -199,6 +207,7 @@ def make_test_three():
     return test_three
 
 def main():
+    """TO-DO: add function doc here"""
     print("This file will test the floyd warshall algorithm and the matrix representation of a graph in Python")
     # test_one = make_test_one()
     # print(test_one)

@@ -113,6 +113,7 @@ class RoadNetwork:
 
     @staticmethod
     def _require_columns(fieldnames: list[str] | None, required: set[str], path: Path) -> None:
+        """TO-DO: add function doc here"""
         actual = set(fieldnames or ())
         missing = required - actual
         if missing:
@@ -120,10 +121,12 @@ class RoadNetwork:
 
     @property
     def zones(self) -> tuple[int, ...]:
+        """TO-DO: add function doc here"""
         return tuple(sorted(node.id for node in self.nodes.values() if node.kind == "zone"))
 
     @property
     def shelters(self) -> tuple[int, ...]:
+        """TO-DO: add function doc here"""
         return tuple(sorted(node.id for node in self.nodes.values() if node.kind == "shelter"))
 
     def adjacency(

@@ -95,6 +95,7 @@ def two_edge_connected_core(V, edges):
 
 def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
           speeds=(14, 18, 76), n_shelter=None, n_zone=None):
+    """TO-DO: add function doc here"""
     rng = random.Random(seed)
 
     # ---- grid dimensions: a bit wider than tall, like a city ----
@@ -103,6 +104,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
     V = W * H
 
     def nid(c, r):
+        """TO-DO: add function doc here"""
         return r * W + c
 
     # ---- jittered positions ----
@@ -149,8 +151,8 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
     for k in deletable[:int(len(deletable) * del_frac)]:
         del edges[k]
 
-    # ---- repair: make the undirected graph connected again ----
     def components():
+        """---- repair: make the undirected graph connected again ----"""
         adj = {v: [] for v in range(V)}
         for (a, b) in edges:
             adj[a].append(b); adj[b].append(a)
@@ -256,6 +258,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
     core = two_edge_connected_core(V, edges)
 
     def banks(pred):
+        """TO-DO: add function doc here"""
         e = [v for v in range(V) if v % W >= xr and pred(v)]
         w = [v for v in range(V) if v % W < xr and pred(v)]
         return e, w
@@ -314,10 +317,11 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
                 pass_time[v] = rng.randint(1, 6)
 
     def pick(lst, i):
+        """TO-DO: add function doc here"""
         return lst[i] if i < len(lst) else f"{lst[i % len(lst)]}_{i // len(lst) + 1}"
 
-    # ---- directed arcs; repair any zone that cannot reach a shelter ----
     def arcs():
+        """---- directed arcs; repair any zone that cannot reach a shelter ----"""
         out = []
         for (a, b), e in edges.items():
             out.append((a, b, e))
@@ -326,6 +330,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
         return out
 
     def unreachable_zones():
+        """TO-DO: add function doc here"""
         radj = {v: [] for v in range(V)}
         for (a, b, e) in arcs():
             radj[b].append(a)                 # predecessor lists
@@ -373,6 +378,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
                     parent[y] = x; q.append(y)
 
         def reaches(z, skip):
+            """TO-DO: add function doc here"""
             seen = {z}; q2 = deque([z])
             while q2:
                 x = q2.popleft()
@@ -416,18 +422,19 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
         if kind[v] != "junction":
             pass_time[v] = 0
 
-    # ---- make the instance SENSITIVE to node costs ----
-    # An instance is useless for checking the 3.2 node-cost transformation
-    # unless ignoring pass_time changes at least one zone's answer.  A count
-    # floor is not enough: the costly junctions have to sit ON the evacuation
-    # routes.  So find the routes with pass_time ignored, and if no interior
-    # junction on any of them is costly, make some of them costly.
-    #
-    # On any instance of real size this condition is already satisfied (the
-    # routes are long and ~22% of junctions are costly), so this fires only on
-    # the small hand-checkable instances and leaves the others untouched.
     def route_interiors():
-        """Interior junctions of each zone's cheapest route, pass_time ignored.
+        """---- make the instance SENSITIVE to node costs ----
+        An instance is useless for checking the 3.2 node-cost transformation
+        unless ignoring pass_time changes at least one zone's answer.  A count
+        floor is not enough: the costly junctions have to sit ON the evacuation
+        routes.  So find the routes with pass_time ignored, and if no interior
+        junction on any of them is costly, make some of them costly.
+        
+        On any instance of real size this condition is already satisfied (the
+        routes are long and ~22% of junctions are costly), so this fires only on
+        the small hand-checkable instances and leaves the others untouched.
+
+        Interior junctions of each zone's cheapest route, pass_time ignored.
         (Generator-internal placement check. This is NOT a model answer for the
         handout's modeling questions -- it solves a different problem, ignores
         node costs, and your memo must justify your own approach regardless.)"""
@@ -497,6 +504,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
 
 
 def write(net, outdir):
+    """TO-DO: add function doc here"""
     os.makedirs(outdir, exist_ok=True)
     with open(os.path.join(outdir, "nodes.tsv"), "w") as f:
         f.write("id\tname\tkind\tpass_time\n")

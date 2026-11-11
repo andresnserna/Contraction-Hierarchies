@@ -31,6 +31,7 @@ class ThreadedRunner:
 
     @staticmethod
     def run(function: Callable[[Event], T], *, stop_after: float | None = 30.0) -> TimedResult:
+        """TO-DO: add function doc here"""
         started = Event()
         finished = Event()
         stop_event = Event()
@@ -40,6 +41,7 @@ class ThreadedRunner:
         timed_out: list[bool] = []
 
         def clock() -> None:
+            """TO-DO: add function doc here"""
             start_time = perf_counter()
             started.set()
             if stop_after is None:
@@ -54,6 +56,7 @@ class ThreadedRunner:
             measured.append(perf_counter() - start_time)
 
         def work() -> None:
+            """TO-DO: add function doc here"""
             started.wait()
             try:
                 values.append(function(stop_event))
@@ -83,11 +86,13 @@ class ThreadedRunner:
 
 
 def with_stop(counters: Counters, stop_event: Event) -> Counters:
+    """TO-DO: add function doc here"""
     counters.stop_event = stop_event
     return counters
 
 
 def main() -> None:
+    """TO-DO: add function doc here"""
     pass
 
 

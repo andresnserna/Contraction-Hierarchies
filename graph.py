@@ -14,57 +14,57 @@ import random
 
 class Graph:
 
-    # Constructor for a weighted graph class (directed and/or undirected edges)
-    # It takes no input
-    # We will store our node names in a dictionary as keys
-    # The value at each key will be a dictionary
-    # The dictionary will hold node names as keys, with weights being the value at each key
-    # This project only allows non-negative edge weights, so Dijkstra is safe for
-    # every graph built through add_edge/add_undirected_edge.
-    # NOTE: At most we can have n(n-1) directed edges in the graph, one per ordered pair (u, v)
-    # (Back when this class only allowed DAGs the limit was n(n-1)/2, because any more edges
-    # was guaranteed to give us at least one cycle)
     def __init__(self):
+        """Constructor for a weighted graph class (directed and/or undirected edges)
+        It takes no input
+        We will store our node names in a dictionary as keys
+        The value at each key will be a dictionary
+        The dictionary will hold node names as keys, with weights being the value at each key
+        This project only allows non-negative edge weights, so Dijkstra is safe for
+        every graph built through add_edge/add_undirected_edge.
+        NOTE: At most we can have n(n-1) directed edges in the graph, one per ordered pair (u, v)
+        (Back when this class only allowed DAGs the limit was n(n-1)/2, because any more edges
+        was guaranteed to give us at least one cycle)"""
         self.nodes = {}
         self.num_nodes = 0
         self.num_edges = 0
 
-    # Return the number of nodes in our graph
     def get_num_nodes(self):
+        """Return the number of nodes in our graph"""
         return self.num_nodes
     
-    # Returns the number of edges in our graph
     def get_num_edges(self):
+        """Returns the number of edges in our graph"""
         return self.num_edges
     
-    # Adds a node to our graph if it is not already in it
     def add_node(self, name):
+        """Adds a node to our graph if it is not already in it"""
         if not name in self.nodes:
             self.nodes[name] = {}
             self.num_nodes += 1
 
-    # Checks to see if a given node is in our graph
     def has_node(self, name):
+        """Checks to see if a given node is in our graph"""
         if name in self.nodes:
             return True
         return False
     
     
-    # We will return False if the edge node1 -> node2 already exists, and True otherwise
-    # Cycles are allowed: node2 -> node1 may already exist (a 2-cycle), and node2 may already
-    # reach node1 through other nodes. Earlier versions of this method rejected both of those
-    # cases so that the graph stayed a DAG; that restriction was removed so we can build graphs
-    # with strongly connected components.
     def check_edge(self, node1, node2):
+        """We will return False if the edge node1 -> node2 already exists, and True otherwise
+        Cycles are allowed: node2 -> node1 may already exist (a 2-cycle), and node2 may already
+        reach node1 through other nodes. Earlier versions of this method rejected both of those
+        cases so that the graph stayed a DAG; that restriction was removed so we can build graphs
+        with strongly connected components."""
         if node1 in self.nodes:
             if node2 in self.nodes[node1]:
                 # print("Edge between %s and %s already exists" %(node1, node2))
                 return False
         return True
     
-    # Determines if node2 is reachable from node1 via a simple path
-    # (add_edge no longer calls this, since cycles are allowed, but it is a handy reachability helper)
     def check_path(self, node1, node2):
+        """Determines if node2 is reachable from node1 via a simple path
+        (add_edge no longer calls this, since cycles are allowed, but it is a handy reachability helper)"""
         to_visit = [node1]
         has_visited = {}
         while len(to_visit) > 0:
@@ -77,14 +77,14 @@ class Graph:
                     to_visit.append(node)
         return False
     
-    # Iterative DFS (note we proceed with the LAST adjacent node added, not the first, order is slightly different than a traditional DFS)
-    # NOTE: node membership is checked directly (node in self.nodes) rather than a numeric
-    # range check against num_nodes, and "visited" is tracked with a set rather than a list
-    # indexed by node value. A list indexed by node value only works if node names happen to be
-    # the exact contiguous integers 0..num_nodes-1 -- true for our current test files, but not
-    # guaranteed in general (an isolated node that never appears in an edge, or non-contiguous
-    # labels, would silently break it). Membership/set-based tracking has no such assumption.
     def get_component(self, node):
+        """Iterative DFS (note we proceed with the LAST adjacent node added, not the first, order is slightly different than a traditional DFS)
+        NOTE: node membership is checked directly (node in self.nodes) rather than a numeric
+        range check against num_nodes, and "visited" is tracked with a set rather than a list
+        indexed by node value. A list indexed by node value only works if node names happen to be
+        the exact contiguous integers 0..num_nodes-1 -- true for our current test files, but not
+        guaranteed in general (an isolated node that never appears in an edge, or non-contiguous
+        labels, would silently break it). Membership/set-based tracking has no such assumption."""
         if node not in self.nodes:
             return "Illegal node entered"
         nodes_to_travel = [node]
@@ -99,11 +99,11 @@ class Graph:
                     nodes_to_travel.append(new_node)
         return result
 
-    # Recursive DFS
-    # Will explore entire graph
-    # NOTE: "found" is a set rather than a list indexed by node value, for the same reason as
-    # get_component above -- no assumption that node names are contiguous integers from 0.
     def DFS(self):
+        """Recursive DFS
+        Will explore entire graph
+        NOTE: "found" is a set rather than a list indexed by node value, for the same reason as
+        get_component above -- no assumption that node names are contiguous integers from 0."""
         found = set()
         for node in self.nodes:
             if node not in found:
@@ -111,17 +111,18 @@ class Graph:
                 print("")
 
     def DFS_visit(self, node, found):
+        """TO-DO: add function doc here"""
         found.add(node)
         print("%s" % node, end=" ")
         for neighbor in self.nodes[node]:
             if neighbor not in found:
                 self.DFS_visit(neighbor, found)
 
-    # Returns all nodes in DFS FINISH order: a node is appended to the list only after every
-    # one of its descendants has already been explored, NOT when it is first discovered.
-    # This is a different order than the one DFS() prints above. Look closely at where the
-    # append happens -- why does its position matter?
     def dfs_finish_order(self):
+        """Returns all nodes in DFS FINISH order: a node is appended to the list only after every
+        one of its descendants has already been explored, NOT when it is first discovered.
+        This is a different order than the one DFS() prints above. Look closely at where the
+        append happens -- why does its position matter?"""
         found = set()
         finish_order = []
         for node in self.nodes:
@@ -130,15 +131,16 @@ class Graph:
         return finish_order
 
     def _dfs_finish_visit(self, node, found, finish_order):
+        """TO-DO: add function doc here"""
         found.add(node)
         for neighbor in self.nodes[node]:
             if neighbor not in found:
                 self._dfs_finish_visit(neighbor, found, finish_order)
         finish_order.append(node)
 
-    # Returns a NEW Graph with every directed edge reversed (weights preserved).
-    # Every node is copied over first, so a node with no edges at all still exists in the result
     def transpose(self):
+        """Returns a NEW Graph with every directed edge reversed (weights preserved).
+        Every node is copied over first, so a node with no edges at all still exists in the result"""
         reversed_graph = Graph()
         for node in self.nodes:
             reversed_graph.add_node(node)
@@ -147,19 +149,19 @@ class Graph:
                 reversed_graph.add_edge(neighbor, node, weight)
         return reversed_graph
 
-    # Kosaraju's algorithm: returns a list of the strongly connected components (SCCs)
-    # Each component is a list of nodes. A node on no cycle is a component by itself.
-    #   Pass 1: DFS on the original graph, recording the order nodes FINISH
-    #   Transpose the graph (reverse every edge)
-    #   Pass 2: take nodes in REVERSE finish order. Each time we reach a node we have not
-    #           visited yet, a DFS from it on the transpose reaches exactly one SCC.
-    # Why it works: the node that finishes last lies in a "source" component of the condensation
-    # DAG. Reversing the edges turns that source into a sink, so the DFS on the transpose cannot
-    # leave its own component. The next unvisited node in reverse finish order is a source of
-    # whatever is left, and so on.
-    # The components come out in topological order of the condensation (upstream components first)
-    # Runs in O(V + E): two DFS passes plus one pass over the edges to build the transpose
     def strongly_connected_components(self):
+        """Kosaraju's algorithm: returns a list of the strongly connected components (SCCs)
+        Each component is a list of nodes. A node on no cycle is a component by itself.
+          Pass 1: DFS on the original graph, recording the order nodes FINISH
+          Transpose the graph (reverse every edge)
+          Pass 2: take nodes in REVERSE finish order. Each time we reach a node we have not
+                  visited yet, a DFS from it on the transpose reaches exactly one SCC.
+        Why it works: the node that finishes last lies in a "source" component of the condensation
+        DAG. Reversing the edges turns that source into a sink, so the DFS on the transpose cannot
+        leave its own component. The next unvisited node in reverse finish order is a source of
+        whatever is left, and so on.
+        The components come out in topological order of the condensation (upstream components first)
+        Runs in O(V + E): two DFS passes plus one pass over the edges to build the transpose"""
         order = self.dfs_finish_order()
         reversed_graph = self.transpose()
         visited = set()          # ONE visited set shared by every search in pass 2
@@ -172,26 +174,27 @@ class Graph:
         return components
 
     def _collect_component(self, node, visited, component):
+        """TO-DO: add function doc here"""
         visited.add(node)
         component.append(node)
         for neighbor in self.nodes[node]:
             if neighbor not in visited:
                 self._collect_component(neighbor, visited, component)
 
-    # Returns every stored directed edge as a list of (u, v, weight) tuples.
-    # For a graph built with add_undirected_edge, each undirected edge appears TWICE this way
-    # (once as (u,v,w), once as (v,u,w)) since that's how it's actually stored -- use
-    # get_undirected_edges() below if you want each undirected edge counted once
     def get_edges(self):
+        """Returns every stored directed edge as a list of (u, v, weight) tuples.
+        For a graph built with add_undirected_edge, each undirected edge appears TWICE this way
+        (once as (u,v,w), once as (v,u,w)) since that's how it's actually stored -- use
+        get_undirected_edges() below if you want each undirected edge counted once"""
         result = []
         for node in self.nodes:
             for neighbor, weight in self.nodes[node].items():
                 result.append((node, neighbor, weight))
         return result
 
-    # Returns a list of all edges in the graph
-    # Prevents double counting (if we have <u,v> we dont need <v,u>)
     def get_undirected_edges(self):
+        """Returns a list of all edges in the graph
+        Prevents double counting (if we have <u,v> we dont need <v,u>)"""
         seen = set()
         result = []
         for (u, v, w) in self.get_edges():
@@ -201,24 +204,24 @@ class Graph:
             result.append((u, v, w))
         return result
 
-    # Dijkstra's algorithm: shortest paths from source to every node, using a binary heap
-    # (Python's heapq) as the priority queue.
-    # Returns (dist, parent):
-    #   dist[v]   = length of the shortest path from source to v (float('inf') if v is unreachable)
-    #   parent[v] = the node just before v on that shortest path (None for the source and for
-    #               unreachable nodes). Follow parents backwards from v to rebuild the path.
-    # The idea: always finalize the closest node we have not finalized yet. Its distance can no
-    # longer improve, because every other route to it must pass through a node that is at least
-    # as far away, and edge weights are never negative. Then "relax" its outgoing edges: if going
-    # through it gives a neighbor a shorter route than we knew, update that neighbor.
-    # REQUIRES non-negative edge weights. Our add_edge/add_undirected_edge reject negative
-    # weights, so that holds for every graph built here. Once negative edges are allowed (see
-    # Bellman-Ford), this method silently returns WRONG answers: a finalized node is never revisited.
-    # Works for directed and undirected graphs (an undirected edge is stored in both directions).
-    # Instead of lowering a node's entry inside the heap (heapq cannot do that), we push a new
-    # entry and skip stale ones when they come out. The heap can hold up to E entries, so the
-    # running time is O((V + E) log V).
     def dijkstra(self, source, counter=None):
+        """Dijkstra's algorithm: shortest paths from source to every node, using a binary heap
+        (Python's heapq) as the priority queue.
+        Returns (dist, parent):
+          dist[v]   = length of the shortest path from source to v (float('inf') if v is unreachable)
+          parent[v] = the node just before v on that shortest path (None for the source and for
+                      unreachable nodes). Follow parents backwards from v to rebuild the path.
+        The idea: always finalize the closest node we have not finalized yet. Its distance can no
+        longer improve, because every other route to it must pass through a node that is at least
+        as far away, and edge weights are never negative. Then "relax" its outgoing edges: if going
+        through it gives a neighbor a shorter route than we knew, update that neighbor.
+        REQUIRES non-negative edge weights. Our add_edge/add_undirected_edge reject negative
+        weights, so that holds for every graph built here. Once negative edges are allowed (see
+        Bellman-Ford), this method silently returns WRONG answers: a finalized node is never revisited.
+        Works for directed and undirected graphs (an undirected edge is stored in both directions).
+        Instead of lowering a node's entry inside the heap (heapq cannot do that), we push a new
+        entry and skip stale ones when they come out. The heap can hold up to E entries, so the
+        running time is O((V + E) log V)."""
         if source not in self.nodes:
             raise ValueError("Illegal node entered")
         dist = {node: float('inf') for node in self.nodes}
@@ -249,11 +252,11 @@ class Graph:
                         counter.pq_ops += 1
         return dist, parent
 
-    # Convenience wrapper: returns (distance, path) for one source/target pair.
-    # method can be "dijkstra" (non-negative weights only) or "bellman_ford".
-    # If target is unreachable, return (inf, None). Bellman-Ford raises ValueError
-    # when a negative cycle reachable from source means no shortest path exists.
     def shortest_path(self, source, target, method="dijkstra"):
+        """Convenience wrapper: returns (distance, path) for one source/target pair.
+        method can be "dijkstra" (non-negative weights only) or "bellman_ford".
+        If target is unreachable, return (inf, None). Bellman-Ford raises ValueError
+        when a negative cycle reachable from source means no shortest path exists."""
         if target not in self.nodes:
             raise ValueError("Illegal node entered")
         if method == "dijkstra":
@@ -277,12 +280,12 @@ class Graph:
         path.reverse()
         return dist[target], path
 
-    # ------------------------------------------------------------------
-    # Bellman-Ford algorithm
-    # ------------------------------------------------------------------
-    # Handles negative edge weights and returns None if a negative cycle can be
-    # reached from source. Otherwise returns (dist, parent), like dijkstra.
     def bellman_ford(self, source, counter=None):
+        """------------------------------------------------------------------
+        Bellman-Ford algorithm
+        ------------------------------------------------------------------
+        Handles negative edge weights and returns None if a negative cycle can be
+        reached from source. Otherwise returns (dist, parent), like dijkstra."""
         if source not in self.nodes:
             raise ValueError("Illegal node entered")
         dist = {node: float('inf') for node in self.nodes}
@@ -312,14 +315,15 @@ class Graph:
                 return None
         return dist, parent
 
-    # ------------------------------------------------------------------
-    # Johnson's all-pairs shortest path algorithm
-    # ------------------------------------------------------------------
-    # Reweights a copy of the graph so Dijkstra can handle negative edges, runs
-    # Dijkstra from every node, then converts the distances back to original weights.
-    # Returns (dist, parent), or None if the graph has a negative cycle.
     def johnsons_apsp(self, verbose=False, counter=None, store_results=True):
+        """------------------------------------------------------------------
+        Johnson's all-pairs shortest path algorithm
+        ------------------------------------------------------------------
+        Reweights a copy of the graph so Dijkstra can handle negative edges, runs
+        Dijkstra from every node, then converts the distances back to original weights.
+        Returns (dist, parent), or None if the graph has a negative cycle."""
         def say(message):
+            """TO-DO: add function doc here"""
             if verbose:
                 print(message)
 
@@ -360,8 +364,8 @@ class Graph:
         say("--- 4. Distances restored (D = D' - h(u) + h(v)) ---")
         return dist, parent
 
-    # Return a NEW graph with the same nodes and edges.
     def _copy(self):
+        """Return a NEW graph with the same nodes and edges."""
         copy = Graph()
         for u in self.nodes:
             copy.add_node(u)
@@ -369,8 +373,8 @@ class Graph:
             copy.add_edge(u, v, weight)
         return copy
 
-    # Return a NEW graph with each edge reweighted to w + h[u] - h[v].
     def _reweighted_copy(self, h):
+        """Return a NEW graph with each edge reweighted to w + h[u] - h[v]."""
         reweighted = Graph()
         for u in self.nodes:
             reweighted.add_node(u)
@@ -378,14 +382,14 @@ class Graph:
             reweighted.add_edge(u, v, weight + h[u] - h[v])
         return reweighted
 
-    # Adds a directed edge node1 -> node2
-    # Cycles are allowed (this class used to be DAG-only; that check was removed in Week 7)
-    # We will make sure that:
-    # 1) Edge weights cannot be negative in this project.
-    # 2) Node1 != Node2
-    # 3) That the edge node1 -> node2 does not already exist
-    #    (node2 -> node1 may exist: that is just a 2-cycle)
     def add_edge(self, node1, node2, weight):
+        """Adds a directed edge node1 -> node2
+        Cycles are allowed (this class used to be DAG-only; that check was removed in Week 7)
+        We will make sure that:
+        1) Edge weights cannot be negative in this project.
+        2) Node1 != Node2
+        3) That the edge node1 -> node2 does not already exist
+           (node2 -> node1 may exist: that is just a 2-cycle)"""
         if weight < 0:
             return
         if node1 == node2:
@@ -397,14 +401,14 @@ class Graph:
             self.nodes[node1][node2] = weight
             self.num_edges += 1
 
-    # Adds an edge between node1 and node2 
-    # We will make sure that:
-    # 1) Edge weights cannot be negative in this project.
-    # 2) Node1 != Node2
-    # 3) That no edge already exists between the nodes
-    # We do not perform the cycle check as all paths are cycles 
-    # in an undirected graph
     def add_undirected_edge(self, node1, node2, weight):
+        """Adds an edge between node1 and node2 
+        We will make sure that:
+        1) Edge weights cannot be negative in this project.
+        2) Node1 != Node2
+        3) That no edge already exists between the nodes
+        We do not perform the cycle check as all paths are cycles 
+        in an undirected graph"""
         if weight < 0:
             return
         if node1 == node2:
@@ -421,6 +425,7 @@ class Graph:
 
 
     def __str__(self):
+        """TO-DO: add function doc here"""
         result = ""
         for node in self.nodes:
             result += "Node %s: " % node
@@ -430,13 +435,13 @@ class Graph:
         return result
 
 
-# Method to construct graphs for testing
-# Will construct a graph that has num_nodes number of nodes and num_edges number of edges
-# If num_nodes < 10, it will be set to 10
-# If num_edges < num_nodes, it will be set to num_nodes
-# If num_edges > num_nodes(num_nodes - 1), it will be set to num_nodes(num_nodes - 1)
-# Currently the weight of an edge will be between 1 and 10, this can be modified for your purposes
 def make_graph(num_nodes, num_edges):
+    """Method to construct graphs for testing
+    Will construct a graph that has num_nodes number of nodes and num_edges number of edges
+    If num_nodes < 10, it will be set to 10
+    If num_edges < num_nodes, it will be set to num_nodes
+    If num_edges > num_nodes(num_nodes - 1), it will be set to num_nodes(num_nodes - 1)
+    Currently the weight of an edge will be between 1 and 10, this can be modified for your purposes"""
     if num_nodes < 10:
         num_nodes = 10
     if num_edges < num_nodes:
@@ -453,13 +458,13 @@ def make_graph(num_nodes, num_edges):
         result.add_edge(node1, node2, weight)
     return result
 
-# Method to construct undirected graphs for testing
-# Will construct a graph that has num_nodes number of nodes and num_edges number of edges
-# If num_nodes < 10, it will be set to 10
-# If num_edges < num_nodes, it will be set to num_nodes
-# If num_edges > num_nodes(num_nodes - 1)/2, it will be set to num_nodes(num_nodes - 1)/2
-# This number is then doubled, as every <u,v,c> edge is also <v,u,c>
 def make_undirected_graph(num_nodes, num_edges):
+    """Method to construct undirected graphs for testing
+    Will construct a graph that has num_nodes number of nodes and num_edges number of edges
+    If num_nodes < 10, it will be set to 10
+    If num_edges < num_nodes, it will be set to num_nodes
+    If num_edges > num_nodes(num_nodes - 1)/2, it will be set to num_nodes(num_nodes - 1)/2
+    This number is then doubled, as every <u,v,c> edge is also <v,u,c>"""
     if num_nodes < 10:
         num_nodes = 10
     if num_edges < num_nodes:

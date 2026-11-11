@@ -16,10 +16,12 @@ APSP_ALGORITHMS = {"dijkstra", "bellman-ford", "johnson", "floyd-warshall"}
 
 
 def _format_distance(value: float) -> str:
+    """TO-DO: add function doc here"""
     return "INF" if value == inf else str(int(value))
 
 
 def _parser() -> argparse.ArgumentParser:
+    """TO-DO: add function doc here"""
     parser = argparse.ArgumentParser(description="Solve Graphs as Networks queries.")
     parser.add_argument("--nodes", type=Path, default=DEFAULT_INSTANCE / "nodes.tsv",
                         help="path to nodes TSV file")
@@ -40,6 +42,7 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """TO-DO: add function doc here"""
     parser = _parser()
     args = parser.parse_args(argv)
     if args.algo is not None and args.query != "apsp":
