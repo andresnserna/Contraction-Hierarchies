@@ -1,0 +1,56 @@
+Instance manifest - parse self-check
+======================================================
+
+If your loader disagrees with any number below, you have a parsing
+bug. Fix that before you trust a single measurement: a loader that
+misses shelters will produce an E1 ratio that looks plausible and is
+wrong, which is the most expensive way to spend an evening on this
+project.
+
+These are counts, not answers. Which of them governs the cost of
+which approach is the 3.1 question, and it is yours to work out.
+
+tiny  (V=20, seed 14, 2 bridges)
+  nodes.tsv data rows       20
+    junctions               12
+    shelters                3
+    zones                   5
+    junctions w/ pass_time>0 2
+  edges.tsv data rows       26
+    one-way                 5
+    two-way                 21
+  directed arcs after load  47   <- two-way rows count twice
+  expected.evac.tsv rows    5
+  regenerate with:
+    python3 netgen.py --nodes 20   --seed 14 --bridges 2 --out instances/tiny
+
+small  (V=192, seed 19, 2 bridges)
+  nodes.tsv data rows       192
+    junctions               170
+    shelters                7
+    zones                   15
+    junctions w/ pass_time>0 50
+  edges.tsv data rows       291
+    one-way                 21
+    two-way                 270
+  directed arcs after load  561   <- two-way rows count twice
+  expected.evac.tsv rows    15
+  regenerate with:
+    python3 netgen.py --nodes 200  --seed 19 --bridges 2 --out instances/small
+
+medium  (V=1989, seed 11, 2 bridges)
+  nodes.tsv data rows       1989
+    junctions               1961
+    shelters                10
+    zones                   18
+    junctions w/ pass_time>0 452
+  edges.tsv data rows       3198
+    one-way                 224
+    two-way                 2974
+  directed arcs after load  6172   <- two-way rows count twice
+  expected.evac.tsv rows    18
+  regenerate with:
+    python3 netgen.py --nodes 2000 --seed 11 --bridges 2 --out instances/medium
+
+Only junctions ever have pass_time > 0. If your parse shows a zone or
+shelter with a nonzero node cost, you are reading the wrong column.

@@ -1,0 +1,6 @@
+# medium APSP is ~3.9M lines / ~50 MB, so the full file is not shipped.
+# Grade against these instead; all four must match.
+finite_pairs	3926332
+sum_of_distances	707706654
+max_distance	408
+sha256_of_sorted_output	813ac3fc67104db65f8bbf8a94905e48dcf1a17507010914bcfec64b2b689f41
