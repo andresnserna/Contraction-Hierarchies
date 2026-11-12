@@ -95,7 +95,7 @@ def two_edge_connected_core(V, edges):
 
 def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
           speeds=(14, 18, 76), n_shelter=None, n_zone=None):
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
     rng = random.Random(seed)
 
     # ---- grid dimensions: a bit wider than tall, like a city ----
@@ -104,7 +104,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
     V = W * H
 
     def nid(c, r):
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         return r * W + c
 
     # ---- jittered positions ----
@@ -258,7 +258,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
     core = two_edge_connected_core(V, edges)
 
     def banks(pred):
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         e = [v for v in range(V) if v % W >= xr and pred(v)]
         w = [v for v in range(V) if v % W < xr and pred(v)]
         return e, w
@@ -317,7 +317,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
                 pass_time[v] = rng.randint(1, 6)
 
     def pick(lst, i):
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         return lst[i] if i < len(lst) else f"{lst[i % len(lst)]}_{i // len(lst) + 1}"
 
     def arcs():
@@ -330,7 +330,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
         return out
 
     def unreachable_zones():
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         radj = {v: [] for v in range(V)}
         for (a, b, e) in arcs():
             radj[b].append(a)                 # predecessor lists
@@ -378,7 +378,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
                     parent[y] = x; q.append(y)
 
         def reaches(z, skip):
-            """TO-DO: add function doc here"""
+            """TODO: add function doc here"""
             seen = {z}; q2 = deque([z])
             while q2:
                 x = q2.popleft()
@@ -504,7 +504,7 @@ def build(n_target, seed, n_bridges=3, del_frac=0.18, oneway_frac=0.08, extra=0,
 
 
 def write(net, outdir):
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
     os.makedirs(outdir, exist_ok=True)
     with open(os.path.join(outdir, "nodes.tsv"), "w") as f:
         f.write("id\tname\tkind\tpass_time\n")

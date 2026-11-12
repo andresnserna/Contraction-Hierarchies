@@ -22,15 +22,15 @@ EDGES = INSTANCE / "edges.tsv"
 
 
 class ProjectQueryTests(unittest.TestCase):
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
 
     @classmethod
     def setUpClass(cls) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         cls.network = RoadNetwork.load(NODES, EDGES)
 
     def test_load(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         self.assertEqual(len(self.network.nodes), 20)
         self.assertEqual(len(self.network.roads), 26)
         self.assertEqual(sum(not road.oneway for road in self.network.roads), 21)
@@ -40,7 +40,7 @@ class ProjectQueryTests(unittest.TestCase):
         self.assertEqual(sum(node.pass_time > 0 for node in self.network.nodes.values()), 2)
 
     def test_evac(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         expected = {}
         with (INSTANCE / "expected.evac.tsv").open(encoding="utf-8") as file:
             for zone, shelter, minutes in csv.reader(file, delimiter="\t"):
@@ -56,7 +56,7 @@ class ProjectQueryTests(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_apsp_algorithms(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         expected = {}
 
         with (INSTANCE / "expected.apsp.tsv").open(encoding="utf-8") as file:
@@ -74,7 +74,7 @@ class ProjectQueryTests(unittest.TestCase):
             self.assertEqual(actual, expected)
 
     def test_floyd_warshall(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         dijkstra_result = all_pairs(self.network, algorithm="dijkstra")
         floyd_result = all_pairs(self.network, algorithm="floyd-warshall")
         self.assertEqual(floyd_result, dijkstra_result)
@@ -107,7 +107,7 @@ class ProjectQueryTests(unittest.TestCase):
                         self.assertEqual(output.getvalue().splitlines(), expected)
 
     def test_critical(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         with (INSTANCE / "expected.critical.tsv").open(encoding="utf-8") as file:
             expected = next(csv.reader(file, delimiter="\t"))
         result = critical_closure(self.network)
@@ -116,13 +116,13 @@ class ProjectQueryTests(unittest.TestCase):
         self.assertEqual([result.u, result.v, result.worst_minutes], [int(x) for x in expected])
 
     def test_unreachable(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         network = RoadNetwork(nodes=self.network.nodes, roads=())
         result = evacuations(network)
         self.assertTrue(any(row.minutes == inf for row in result))
 
     def test_route_tie(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         network = RoadNetwork(
             nodes={
                 0: Node(0, "Zone", "zone", 0),
@@ -239,7 +239,7 @@ class ProjectQueryTests(unittest.TestCase):
                 os.chdir(original_cwd)
 
     def test_verbose_summary_goes_to_stderr(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         stdout = io.StringIO()
         stderr = io.StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -255,7 +255,7 @@ class ProjectQueryTests(unittest.TestCase):
         self.assertNotIn("V=20", stdout.getvalue())
 
     def test_cli_rejects_incompatible_flags_invalid_ids_and_bad_input(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         invalid_args = (
             ["--nodes", str(NODES), "--edges", str(EDGES), "--query", "evac", "--algo", "dijkstra"],
             ["--nodes", str(NODES), "--edges", str(EDGES), "--query", "critical", "--close", "6", "7"],
