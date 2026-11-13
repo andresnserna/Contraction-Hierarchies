@@ -14,17 +14,23 @@ class Counters:
     """
 
     relaxations: int = 0
+    nodes_settled: int = 0
+    preprocessing_time: float = 0.0
+    query_time: float = 0.0
     pq_ops: int = 0
-    stop_event: Event | None = None
+    stop_event: Event | None = None 
 
     def check_timeout(self) -> None:
-        """TO-DO: add function doc here"""
+        """Raises TimeoutError if the stop event has been triggered."""
         if self.stop_event is not None and self.stop_event.is_set():
             raise TimeoutError("experiment run reached its stop limit")
 
     def add(self, other: Counters) -> None:
-        """TO-DO: add function doc here"""
+        """Combines metrics from another Counters instance into this one."""
         self.relaxations += other.relaxations
+        self.nodes_settled += other.nodes_settled
+        self.preprocessing_time += other.preprocessing_time
+        self.query_time += other.query_time
         self.pq_ops += other.pq_ops
 
 
