@@ -18,12 +18,12 @@ class Counters:
     stop_event: Event | None = None
 
     def check_timeout(self) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         if self.stop_event is not None and self.stop_event.is_set():
             raise TimeoutError("experiment run reached its stop limit")
 
     def add(self, other: Counters) -> None:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         self.relaxations += other.relaxations
         self.pq_ops += other.pq_ops
 
@@ -77,7 +77,7 @@ def _multi_source_evacuation(network: RoadNetwork, *, excluded_road_ids: frozens
     dict[int, int | None],
     dict[int, int | None],
 ]:    
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
 
     # precondition: If there are no shelters, there is no destination to route anyone to.
     if not network.shelters:

@@ -17,7 +17,7 @@
 
 
 class Weighted_Graph:
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
 
     def __init__(self, num_nodes, counter=None):
         self.num_nodes = num_nodes
@@ -29,11 +29,11 @@ class Weighted_Graph:
         self.num_edges = 0
 
     def get_num_nodes(self):
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         return self.num_nodes
     
     def get_edge(self, i, j):
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         if i > -1 and i < self.num_nodes and j > -1 and j < self.num_nodes:
             return self.graph[i][j]
         else:
@@ -123,7 +123,7 @@ def build_path(parent, source, target):
     return path
 
 def print_matrix(matrix):
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
     result = ""
     for row in matrix:
         for val in row:
