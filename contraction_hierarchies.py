@@ -43,6 +43,12 @@ class ContractionHierarchy:
         self.backward_upward: dict[int, dict[int, _CHEdge]] = {
             node_id: {} for node_id in network.nodes
         }
+        # New: downward graph for backward search from target
+        # Contains shortcuts where rank[source] > rank[target], stored in natural
+        # direction (source -> target, going from higher rank to lower rank)
+        self.downward_graph: dict[int, dict[int, _CHEdge]] = {
+            node_id: {} for node_id in network.nodes
+        }
         self.shortcuts_added = 0
         self.is_preprocessed = False
         self._contracted: set[int] = set()
@@ -183,14 +189,17 @@ class ContractionHierarchy:
         return True
 
     def _build_upward_graphs(self) -> None:
-        """Split contracted graph into forward and reversed-backward upward edges."""
+        """Split contracted edges into upward and downward query graphs."""
         self.forward_upward = {node: {} for node in self.network.nodes}
         self.backward_upward = {node: {} for node in self.network.nodes}
+        self.downward_graph = {node: {} for node in self.network.nodes}
         for source, edges in self.contracted_graph.items():
             for target, edge in edges.items():
                 if self.rank[source] < self.rank[target]:
                     self.forward_upward[source][target] = edge
                 elif self.rank[source] > self.rank[target]:
+                    self.downward_graph[source][target] = edge
+                    # Retain the legacy reversed adjacency for callers that use it.
                     self.backward_upward[target][source] = _CHEdge(
                         target, source, edge.weight, edge.middle_node, edge.left, edge.right
                     )
@@ -231,8 +240,17 @@ class ContractionHierarchy:
         forward_dist, forward_parent = self._upward_search(
             source, self.forward_upward, counter
         )
+        # Backward search from target follows incoming downward edges. Build the
+        # reverse adjacency while preserving each edge's original orientation.
+        reverse_downward = {node: {} for node in self.network.nodes}
+        for edge_source, edges in self.downward_graph.items():
+            for edge_target, edge in edges.items():
+                reverse_downward[edge_target][edge_source] = _CHEdge(
+                    edge_target, edge_source, edge.weight,
+                    edge.middle_node, edge.left, edge.right,
+                )
         backward_dist, backward_parent = self._upward_search(
-            target, self.backward_upward, counter
+            target, reverse_downward, counter
         )
         meeting = min(
             self.network.nodes,
@@ -250,13 +268,13 @@ class ContractionHierarchy:
             node = edge.source
         left_edges.reverse()
 
-        # backward_upward stores reversed traversal edges. Their original CH
-        # edge runs from the current node toward the next node on the route.
+        # The backward search traversed reversed downward edges. Recover each
+        # original CH edge, which runs from the current route node to the next.
         right_edges: list[_CHEdge] = []
         node = meeting
         while node != target:
             reverse_edge = backward_parent[node]
-            original = self.contracted_graph[reverse_edge.target][reverse_edge.source]
+            original = self.downward_graph[reverse_edge.target][reverse_edge.source]
             right_edges.append(original)
             node = reverse_edge.source
 
