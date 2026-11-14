@@ -221,6 +221,26 @@ class ProjectQueryTests(unittest.TestCase):
         floyd_result = all_pairs(self.network, algorithm="floyd-warshall")
         self.assertEqual(floyd_result, dijkstra_result)
 
+    def test_ch_distances_match_dijkstra_for_all_pairs(self) -> None:
+        """Compare CH and Dijkstra distances for every node pair on test graphs."""
+        # (Due at checkpoint)
+        pass
+
+    def test_ch_paths_are_valid_and_have_dijkstra_distance(self) -> None:
+        """Verify CH paths are valid routes with the same shortest distance as Dijkstra."""
+        # (Due at checkpoint)
+        pass
+
+    def test_ch_shortcuts_unpack_to_original_paths(self) -> None:
+        """Verify shortcut-based CH routes unpack into valid original-road paths."""
+        # (Due at checkpoint)
+        pass
+
+    def test_dijkstra_and_ch_counters_match_known_graph(self) -> None:
+        """Check Dijkstra and CH operation counters against hand-computed totals."""
+        # (Due at checkpoint)
+        pass
+
     def test_cli_outputs(self) -> None:
         """Run the actual CLI on both shipped TSV datasets and compare its rows with the expected shelter assignments and all-pairs travel times."""
         for instance_name in ("tiny", "small"):
