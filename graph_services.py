@@ -5,6 +5,7 @@ from threading import Event
 from Floyd_Warshall import Weighted_Graph, floyd_warshall
 from graph import Graph
 from road_network import RoadNetwork
+from time import perf_counter
 
 
 @dataclass

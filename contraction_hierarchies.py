@@ -6,6 +6,7 @@ import heapq
 from dataclasses import dataclass
 from math import inf
 from typing import TYPE_CHECKING
+from time import perf_counter
 
 from road_network import RoadNetwork
 
@@ -65,17 +66,22 @@ class ContractionHierarchy:
 
     def preprocess(self, counter: Counters | None = None) -> None:
         """Build the node hierarchy, shortcuts, and upward query graphs."""
+        start_time = perf_counter()
+        
         self._build_contracted_graph()
         self.rank.clear()
         self._contracted.clear()
         self.shortcuts_added = 0
-        self.node_order = self.order_nodes()
+        self.node_order = self.order_nodes(counter=counter)
 
         for rank, node_id in enumerate(self.node_order):
-            self._contract_node(node_id, rank)
+            self._contract_node(node_id, rank, counter=counter)
 
         self._build_upward_graphs()
         self.is_preprocessed = True
+        
+        if counter is not None:
+            counter.preprocessing_time += (perf_counter() - start_time)
 
     def order_nodes(self, counter: Counters | None = None) -> list[int]:
         """Sort nodes by outgoing degree minus incoming degree in the road graph."""
@@ -154,9 +160,18 @@ class ContractionHierarchy:
             return inf
         distances = {source: 0}
         heap = [(0, source)]
+        if counter is not None:
+            counter.pq_ops += 1
+            
         settled: set[int] = set()
         while heap:
+            if counter is not None:
+                counter.check_timeout()
+                
             distance, node = heapq.heappop(heap)
+            if counter is not None:
+                counter.pq_ops += 1
+                
             if node in settled or distance != distances.get(node):
                 continue
             # Since heap keys are ordered, no remaining route can be a witness
@@ -165,14 +180,24 @@ class ContractionHierarchy:
                 break
             if node == target:
                 return distance
+                
             settled.add(node)
+            if counter is not None:
+                counter.nodes_settled += 1
+                
             for neighbor, edge in self.contracted_graph[node].items():
+                if counter is not None:
+                    counter.check_timeout()
+                    counter.relaxations += 1
+                    
                 if neighbor == avoided_node or neighbor in self._contracted or neighbor in settled:
                     continue
                 new_distance = distance + edge.weight
                 if new_distance <= max_distance and new_distance < distances.get(neighbor, inf):
                     distances[neighbor] = new_distance
                     heapq.heappush(heap, (new_distance, neighbor))
+                    if counter is not None:
+                        counter.pq_ops += 1
         return inf
 
     def _add_shortcut(
@@ -215,28 +240,53 @@ class ContractionHierarchy:
         parent: dict[int, _CHEdge] = {}
         distances[source] = 0
         heap = [(0, source)]
+        if counter is not None:
+            counter.pq_ops += 1
+            
         while heap:
+            if counter is not None:
+                counter.check_timeout()
+                
             distance, node = heapq.heappop(heap)
+            if counter is not None:
+                counter.pq_ops += 1
+                
             if distance != distances[node]:
                 continue
+                
+            if counter is not None:
+                counter.nodes_settled += 1
+                
             for target, edge in adjacency[node].items():
+                if counter is not None:
+                    counter.check_timeout()
+                    counter.relaxations += 1
+                    
                 candidate = distance + edge.weight
                 if candidate < distances[target]:
                     distances[target] = candidate
                     parent[target] = edge
                     heapq.heappush(heap, (candidate, target))
+                    if counter is not None:
+                        counter.pq_ops += 1
         return distances, parent
 
     def shortest_path(
         self, source: int, target: int, counter: Counters | None = None
     ) -> tuple[float, list[int] | None]:
         """Return shortest distance and node path, or (inf, None) if unreachable."""
+        start_time = perf_counter()
+        
         if source not in self.network.nodes or target not in self.network.nodes:
             raise ValueError("Illegal node entered")
         if not self.is_preprocessed:
-            self.preprocess()
+            self.preprocess(counter=counter)
+            
         if source == target:
+            if counter is not None:
+                counter.query_time += (perf_counter() - start_time)
             return 0, [source]
+            
         forward_dist, forward_parent = self._upward_search(
             source, self.forward_upward, counter
         )
@@ -257,7 +307,10 @@ class ContractionHierarchy:
             key=lambda node: (forward_dist[node] + backward_dist[node], node),
         )
         distance = forward_dist[meeting] + backward_dist[meeting]
+        
         if distance == inf:
+            if counter is not None:
+                counter.query_time += (perf_counter() - start_time)
             return inf, None
 
         left_edges: list[_CHEdge] = []
@@ -282,6 +335,10 @@ class ContractionHierarchy:
         for edge in left_edges + right_edges:
             part = self._unpack_edge(edge)
             path.extend(part[1:])
+            
+        if counter is not None:
+            counter.query_time += (perf_counter() - start_time)
+            
         return distance, path
 
     def _unpack_edge(self, edge: _CHEdge) -> list[int]:
