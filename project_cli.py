@@ -16,12 +16,12 @@ APSP_ALGORITHMS = {"dijkstra", "bellman-ford", "johnson", "floyd-warshall"}
 
 
 def _format_distance(value: float) -> str:
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
     return "INF" if value == inf else str(int(value))
 
 
 def _parser() -> argparse.ArgumentParser:
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
     parser = argparse.ArgumentParser(description="Solve Graphs as Networks queries.")
     parser.add_argument("--nodes", type=Path, default=DEFAULT_INSTANCE / "nodes.tsv",
                         help="path to nodes TSV file")

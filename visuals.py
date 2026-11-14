@@ -33,13 +33,13 @@ def draw_experiment_3_1(data_path: Path, output_dir: Path) -> tuple[Path, Path]:
     colors = ("#3568a8", "#e18b32", "#4b9b67")
 
     def display_name(dataset: str) -> str:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         if dataset.startswith("generated_z"):
             return dataset.removeprefix("generated_").replace("z", "Z").replace("_s", "/S")
         return dataset
 
     def draw(metric: str, title: str, ylabel: str, filename: str) -> Path:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         figure, axis = plt.subplots(
             figsize=(max(10, len(datasets) * 1.5), 5.5), layout="constrained"
         )
@@ -100,7 +100,7 @@ def draw_experiment_3_2(data_path: Path, output_dir: Path) -> tuple[Path, Path]:
     ])
 
     def draw(metric: str, title: str, ylabel: str, filename: str) -> Path:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         figure, axis = plt.subplots(figsize=(12, 6.5), layout="constrained")
         missing: dict[int, list[str]] = {}
         for algorithm_index, algorithm in enumerate(algorithms):
@@ -182,7 +182,7 @@ def draw_experiment_3_3(data_path: Path, output_dir: Path) -> tuple[Path, Path]:
     ])
 
     def draw(metric: str, title: str, ylabel: str, filename: str) -> Path:
-        """TO-DO: add function doc here"""
+        """TODO: add function doc here"""
         figure, axis = plt.subplots(figsize=(11, 6), layout="constrained")
         for algorithm_index, algorithm in enumerate(algorithms):
             for index, edge_count in enumerate(edge_counts):
