@@ -241,6 +241,10 @@ class Graph:
             if node in done:          # stale entry: we already finalized this node
                 continue
             done.add(node)
+
+            if counter is not None:
+                counter.nodes_settled += 1
+                
             for neighbor, weight in self.nodes[node].items():
                 if counter is not None:
                     counter.check_timeout()
