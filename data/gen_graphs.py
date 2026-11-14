@@ -160,7 +160,7 @@ def grid_graph(n, directed, seed=None):
 
 
 def write(nodes, edges, outdir):
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
     os.makedirs(outdir, exist_ok=True)
     with open(os.path.join(outdir, "node.tsv"), "w") as f:
         f.write("node_id\n")

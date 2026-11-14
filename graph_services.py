@@ -83,7 +83,7 @@ def _multi_source_evacuation(network: RoadNetwork, *, excluded_road_ids: frozens
     dict[int, int | None],
     dict[int, int | None],
 ]:    
-    """TO-DO: add function doc here"""
+    """TODO: add function doc here"""
 
     # precondition: If there are no shelters, there is no destination to route anyone to.
     if not network.shelters:
