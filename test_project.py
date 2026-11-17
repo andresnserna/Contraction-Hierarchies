@@ -18,6 +18,9 @@ from project_cli import main as cli_main
 from graph_services import all_pairs, critical_closure, evacuations
 from road_network import Node, Road, RoadNetwork
 
+from contraction_hierarchies import ContractionHierarchy
+from graph_services import Counters, _dijkstra_graph
+
 
 INSTANCE = Path(__file__).parent / "data" / "instances" / "tiny"
 NODES = INSTANCE / "nodes.tsv"
@@ -224,22 +227,113 @@ class ProjectQueryTests(unittest.TestCase):
     def test_ch_distances_match_dijkstra_for_all_pairs(self) -> None:
         """Compare CH and Dijkstra distances for every node pair on test graphs."""
         # (Due at checkpoint)
-        pass
+        dijkstra_apsp = all_pairs(self.network, algorithm="dijkstra")
+        ch = ContractionHierarchy(self.network)
+        ch.preprocess()
+        
+        for source in self.network.nodes:
+            # Grab the pass_time of the starting node
+            source_cost = self.network.nodes[source].pass_time
+            
+            for target in self.network.nodes:
+                if source == target:
+                    continue
+                    
+                ch_distance, _ = ch.shortest_path(source, target)
+                
+                # APSP strips the source node's pass_time, so we must strip it from ch_distance too
+                adjusted_ch = ch_distance - source_cost if ch_distance != inf else inf
+                
+                self.assertEqual(
+                    adjusted_ch, 
+                    dijkstra_apsp[source].get(target, inf),
+                    f"Mismatch {source}->{target}: CH={adjusted_ch}, APSP={dijkstra_apsp[source].get(target, inf)}"
+                )
 
     def test_ch_paths_are_valid_and_have_dijkstra_distance(self) -> None:
         """Verify CH paths are valid routes with the same shortest distance as Dijkstra."""
         # (Due at checkpoint)
-        pass
+        ch = ContractionHierarchy(self.network)
+        ch.preprocess()
+        adjacency = self.network.adjacency()
+        
+        for source in self.network.nodes:
+            for target in self.network.nodes:
+                ch_distance, ch_path = ch.shortest_path(source, target)
+                
+                if ch_distance == inf:
+                    self.assertIsNone(ch_path)
+                    continue
+                
+                self.assertIsNotNone(ch_path)
+                self.assertEqual(ch_path[0], source)
+                self.assertEqual(ch_path[-1], target)
+                
+                # Sum the physical edge weights to prove the path matches the distance
+                path_weight = 0
+                for i in range(len(ch_path) - 1):
+                    u, v = ch_path[i], ch_path[i + 1]
+                    arcs = adjacency.get(u, [])
+                    path_weight += min((arc.weight for arc in arcs if arc.target == v), default=inf)
+                
+                self.assertEqual(path_weight, ch_distance)
 
     def test_ch_shortcuts_unpack_to_original_paths(self) -> None:
         """Verify shortcut-based CH routes unpack into valid original-road paths."""
         # (Due at checkpoint)
-        pass
+        ch = ContractionHierarchy(self.network)
+        ch.preprocess()
+        adjacency = self.network.adjacency()
+        
+        for source in self.network.nodes:
+            for target in self.network.nodes:
+                _, ch_path = ch.shortest_path(source, target)
+                if ch_path is None:
+                    continue
+                    
+                # Verify every step in the path exists directly in the original network
+                for i in range(len(ch_path) - 1):
+                    u, v = ch_path[i], ch_path[i + 1]
+                    is_neighbor = any(arc.target == v for arc in adjacency.get(u, []))
+                    self.assertTrue(is_neighbor, f"Invalid step {u} -> {v} not in original network.")
 
     def test_dijkstra_and_ch_counters_match_known_graph(self) -> None:
         """Check Dijkstra and CH operation counters against hand-computed totals."""
         # (Due at checkpoint)
-        pass
+        # Using a custom 3-node line graph so we can hand-compute the exact expected counter totals
+        from graph_services import _dijkstra_graph, Counters
+        
+        network = RoadNetwork(
+            nodes={
+                0: Node(0, "A", "junction", 0),
+                1: Node(1, "B", "junction", 0),
+                2: Node(2, "C", "junction", 0),
+            },
+            roads=(
+                Road(0, 0, 1, 5, 10, True),
+                Road(1, 1, 2, 5, 10, True),
+            ),
+        )
+        
+        # Test Dijkstra
+        graph, _ = _dijkstra_graph(network)
+        d_counter = Counters()
+        graph.dijkstra(0, counter=d_counter)
+        
+        self.assertEqual(d_counter.nodes_settled, 3) # 0, 1, and 2 are settled
+        self.assertEqual(d_counter.relaxations, 2)   # 0->1 and 1->2 are relaxed
+        
+        # Test CH
+        ch_counter = Counters()
+        ch = ContractionHierarchy(network)
+        ch.preprocess(counter=ch_counter)
+        
+        self.assertGreater(ch_counter.preprocessing_time, 0.0)
+        
+        query_counter = Counters()
+        ch.shortest_path(0, 2, counter=query_counter)
+        self.assertGreater(query_counter.nodes_settled, 0)
+        self.assertGreater(query_counter.query_time, 0.0)
 
     def test_cli_outputs(self) -> None:
         """Run the actual CLI on both shipped TSV datasets and compare its rows with the expected shelter assignments and all-pairs travel times."""
