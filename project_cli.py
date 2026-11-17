@@ -21,35 +21,75 @@ def _format_distance(value: float) -> str:
 
 
 def _parser() -> argparse.ArgumentParser:
-    """TODO: add function doc here"""
-    parser = argparse.ArgumentParser(description="Solve Graphs as Networks queries.")
+    """Build the command-line parser for legacy queries and planned path queries."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Solve road-network queries. Use --query for evacuation, all-pairs, "
+            "or critical-road analysis; use --find for a point-to-point path."
+        ),
+        epilog=(
+            "Examples: --query evac; --find 12 31; --find rand --data TINY; "
+            "--find 12 31 --algo dijkstra --verbose"
+        ),
+    )
     parser.add_argument("--nodes", type=Path, default=DEFAULT_INSTANCE / "nodes.tsv",
-                        help="path to nodes TSV file")
+                        help="path to the input nodes TSV file (legacy queries default to the tiny instance)")
     parser.add_argument("--edges", type=Path, default=DEFAULT_INSTANCE / "edges.tsv",
-                        help="path to edges TSV file")
-    parser.add_argument("--query", required=True, choices=("evac", "apsp", "critical"),
-                        help="query to run")
+                        help="path to the input edges TSV file (legacy queries default to the tiny instance)")
+    parser.add_argument(
+        "--data", choices=("TINY", "SMALL", "MEDIUM"), metavar="DATASET",
+        help="select a bundled dataset (TINY, SMALL, or MEDIUM); planned to resolve its nodes.tsv and edges.tsv files",
+    )
+    parser.add_argument(
+        "--query", choices=("evac", "apsp", "critical"),
+        help="run a legacy query: evac assigns zones to shelters, apsp prints all-pairs distances, or critical finds the critical road",
+    )
+    parser.add_argument(
+        "--find", nargs="+", metavar="U/V",
+        help="find a shortest path between node IDs U and V, or pass the single value 'rand' to choose a random pair",
+    )
     parser.add_argument("--close", nargs=2, type=int, metavar=("U", "V"),
                         help="show evacuation results with directed edge U->V closed")
     parser.add_argument(
         "--algo",
-        choices=sorted(APSP_ALGORITHMS),
-        help="APSP algorithm (dijkstra, bellman-ford, johnson, or floyd-warshall)",
+        choices=sorted(APSP_ALGORITHMS | {"ch"}),
+        help="path algorithm for --find (ch or dijkstra; planned default: ch), or APSP algorithm for --query apsp (dijkstra, bellman-ford, johnson, or floyd-warshall)",
     )
     parser.add_argument("--counters", action="store_true", help="write operation counts to counters.txt")
-    parser.add_argument("--verbose", action="store_true", help="print search summary to stderr")
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="print the path search summary and metrics (relaxations, priority-queue operations, preprocessing time, and query time)",
+    )
+    parser.add_argument(
+        "--compare", action="store_true",
+        help="run both Contraction Hierarchies and Dijkstra for --find, print both results and metrics, and report the winner",
+    )
     return parser
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
+    if args.query is None and args.find is None:
+        parser.error("specify either --query or --find")
+    if args.query is not None and args.find is not None:
+        parser.error("--query and --find cannot be used together")
+    if args.compare and args.find is None:
+        parser.error("--compare is only applicable to --find")
+    if args.find is not None:
+        # TODO: Validate the --find shape (two node IDs or the single token 'rand'),
+        # choose/validate the dataset, and route this mode to the CH/Dijkstra flow.
+        parser.error("--find execution is not implemented yet")
+    if args.data is not None:
+        # TODO: Resolve --data to its bundled nodes.tsv and edges.tsv paths.
+        pass
     if args.algo is not None and args.query != "apsp":
         parser.error("--algo is only applicable to --query apsp")
     if args.close is not None and args.query != "evac":
         parser.error("--close is only applicable to --query evac")
 
     try:
+        # TODO: Once --data and explicit --nodes/--edges are supported together,
+        # validate their precedence and report missing or invalid input paths here.
         network = RoadNetwork.load(args.nodes, args.edges)
         counter = Counters()
 
