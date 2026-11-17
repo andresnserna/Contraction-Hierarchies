@@ -112,7 +112,7 @@ class Graph:
                 print("")
 
     def DFS_visit(self, node, found):
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         found.add(node)
         print("%s" % node, end=" ")
         for neighbor in self.nodes[node]:
@@ -132,7 +132,7 @@ class Graph:
         return finish_order
 
     def _dfs_finish_visit(self, node, found, finish_order):
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         found.add(node)
         for neighbor in self.nodes[node]:
             if neighbor not in found:
@@ -175,7 +175,7 @@ class Graph:
         return components
 
     def _collect_component(self, node, visited, component):
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         visited.add(node)
         component.append(node)
         for neighbor in self.nodes[node]:
@@ -328,7 +328,7 @@ class Graph:
         Dijkstra from every node, then converts the distances back to original weights.
         Returns (dist, parent), or None if the graph has a negative cycle."""
         def say(message):
-            """TODO: add function doc here"""
+            """TODO: write function doc here"""
             if verbose:
                 print(message)
 

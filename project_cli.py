@@ -16,7 +16,7 @@ APSP_ALGORITHMS = {"dijkstra", "bellman-ford", "johnson", "floyd-warshall"}
 
 
 def _format_distance(value: float) -> str:
-    """TODO: add function doc here"""
+    """TODO: write function doc here"""
     return "INF" if value == inf else str(int(value))
 
 

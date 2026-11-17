@@ -9,7 +9,7 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Node:
-    """TODO: add function doc here"""
+    """TODO: write function doc here"""
 
     id: int
     name: str
@@ -19,7 +19,7 @@ class Node:
 
 @dataclass(frozen=True)
 class Road:
-    """TODO: add function doc here"""
+    """TODO: write function doc here"""
 
     id: int
     u: int
@@ -31,7 +31,7 @@ class Road:
 
 @dataclass(frozen=True)
 class Arc:
-    """TODO: add function doc here"""
+    """TODO: write function doc here"""
 
     source: int
     target: int
@@ -41,7 +41,7 @@ class Arc:
 
 @dataclass
 class RoadNetwork:
-    """TODO: add function doc here"""
+    """TODO: write function doc here"""
 
     nodes: dict[int, Node]
     roads: tuple[Road, ...]
@@ -121,7 +121,7 @@ class RoadNetwork:
 
     @staticmethod
     def _require_columns(fieldnames: list[str] | None, required: set[str], path: Path) -> None:
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         actual = set(fieldnames or ())
         missing = required - actual
         if missing:
@@ -129,12 +129,12 @@ class RoadNetwork:
 
     @property
     def zones(self) -> tuple[int, ...]:
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         return tuple(sorted(node.id for node in self.nodes.values() if node.kind == "zone"))
 
     @property
     def shelters(self) -> tuple[int, ...]:
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         return tuple(sorted(node.id for node in self.nodes.values() if node.kind == "shelter"))
 
     def adjacency(

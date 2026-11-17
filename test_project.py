@@ -166,15 +166,15 @@ class GraphGeneratorTests(unittest.TestCase):
 
 
 class ProjectQueryTests(unittest.TestCase):
-    """TODO: add function doc here"""
+    """TODO: write function doc here"""
 
     @classmethod
     def setUpClass(cls) -> None:
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         cls.network = RoadNetwork.load(NODES, EDGES)
 
     def test_load(self) -> None:
-        """TODO: add function doc here"""
+        """TODO: write function doc here"""
         self.assertEqual(len(self.network.nodes), 20)
         self.assertEqual(len(self.network.roads), 26)
         self.assertEqual(sum(not road.oneway for road in self.network.roads), 21)
