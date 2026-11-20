@@ -1,5 +1,8 @@
 #runtime files
+*/__pycache__
 __pycache__/
 
 # Downloaded road networks and generated TSV exports
 /data/real-life-examples/
+
+*.pyc
