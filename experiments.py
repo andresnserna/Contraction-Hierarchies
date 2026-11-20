@@ -12,9 +12,8 @@ from threading import Event, Thread
 from time import perf_counter
 from typing import Callable, TypeVar
 
-from graph_services import Counters, benchmark_all_pairs, evacuations, naive_per_shelter, naive_per_zone
+from graph_services import Counters
 from road_network import RoadNetwork
-from visuals import draw_experiment_3_1
 
 T = TypeVar("T")
 

@@ -228,6 +228,8 @@ class Graph:
         dist = {node: float('inf') for node in self.nodes}
         parent = {node: None for node in self.nodes}
         dist[source] = 0
+        if counter is not None:
+            counter.progress(f"Dijkstra: search started at node {source} ({len(self.nodes)} nodes).")
         heap = [(0, source)]          # (distance, node), the smallest distance comes out first
         if counter is not None:
             counter.pq_ops += 1
@@ -244,6 +246,8 @@ class Graph:
 
             if counter is not None:
                 counter.nodes_settled += 1
+                if counter.nodes_settled % 1000 == 0:
+                    counter.progress(f"Dijkstra: settled {counter.nodes_settled} nodes.")
                 
             for neighbor, weight in self.nodes[node].items():
                 if counter is not None:
@@ -255,6 +259,8 @@ class Graph:
                     heapq.heappush(heap, (dist[neighbor], neighbor))
                     if counter is not None:
                         counter.pq_ops += 1
+        if counter is not None:
+            counter.progress(f"Dijkstra: finished; settled {counter.nodes_settled} nodes.")
         return dist, parent
 
     def shortest_path(self, source, target, method="dijkstra"):

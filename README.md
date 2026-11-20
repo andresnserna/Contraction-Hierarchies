@@ -85,7 +85,11 @@ python3 "Graphs as Networks/project_cli.py" --query critical
 
 ### Operation counts and search summary
 
-Add `--counters` to write `counters.txt` in the current working directory. It contains tab-separated `Relaxations` and `PQ_Ops` counts. A relaxation is an edge considered for a distance improvement. `PQ_Ops` counts priority-queue pushes and pops; algorithms that do not use a priority queue report zero for this metric.
+Add `--counters` to write `counters.txt` in the current working directory. It contains tab-separated operation counts, elapsed times, and directed-edge metrics. A relaxation is an edge considered for a distance improvement. `PQ_Ops` counts priority-queue pushes and pops; algorithms that do not use a priority queue report zero for this metric. For CH runs, the summary also reports shortcuts added, edges retained in the contracted graph, and edges in the upward/downward query graphs.
+
+These edge counts are structural storage proxies, not byte counts. Dijkstra's persistent graph is the original network; its distance, parent, settled-node, and priority-queue data are temporary query workspace. CH adds its contracted graph and query graphs. The counters report original directed edges and CH edges so the index growth can be compared consistently. They do not claim to measure transient query workspace.
+
+Exact memory in bytes can be measured for a particular Python runtime with tools such as `tracemalloc` (Python allocations) or process-level resident-set measurements (whole process). Results depend on Python version/build, platform, allocator, and measurement method. `sys.getsizeof` alone is shallow and misses referenced objects; a recursive object-graph estimate is possible but is likewise runtime-specific. For a paper-style algorithm comparison, report `|V|`, original directed `|E|`, shortcut count, and CH stored-edge counts, and label any byte measurement with its runtime and method.
 
 ```sh
 python3 "Graphs as Networks/project_cli.py" --query apsp --algo floyd-warshall --counters

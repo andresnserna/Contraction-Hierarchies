@@ -1,138 +1,158 @@
-"""Command-line entry point for COSC 4367 Project 2."""
+"""Command-line entry point for point-to-point road-network routing."""
 
 from __future__ import annotations
 
 import argparse
+import random
 import sys
-from math import inf
 from pathlib import Path
 
-from graph_services import Counters, all_pairs, critical_closure, evacuations
-from road_network import RoadNetwork
+from contraction_hierarchies import ContractionHierarchy
+from graph_services import (
+    Counters,
+    compare_algorithms,
+    find_path_ch,
+    find_path_dijkstra,
+    format_comparison,
+    format_path_result,
+    resolve_network,
+)
 
-
-DEFAULT_INSTANCE = Path(__file__).parent / "data" / "instances" / "tiny"
-APSP_ALGORITHMS = {"dijkstra", "bellman-ford", "johnson", "floyd-warshall"}
-
-
-def _format_distance(value: float) -> str:
-    """TODO: write function doc here"""
-    return "INF" if value == inf else str(int(value))
+DATASETS = ("tiny", "small", "medium")
 
 
 def _parser() -> argparse.ArgumentParser:
-    """Build the command-line parser for legacy queries and planned path queries."""
     parser = argparse.ArgumentParser(
         description=(
-            "Solve road-network queries. Use --query for evacuation, all-pairs, "
-            "or critical-road analysis; use --find for a point-to-point path."
+            "Find a shortest path with Dijkstra or Contraction Hierarchies, or "
+            "compare both algorithms on the same pair of nodes. Exactly one of "
+            "--find and --compare is required."
         ),
         epilog=(
-            "Examples: --query evac; --find 12 31; --find rand --data TINY; "
-            "--find 12 31 --algo dijkstra --verbose"
+            "Examples:\n"
+            "  project_cli.py --find 12 31\n"
+            "  project_cli.py --find rand --data small --algo dijkstra\n"
+            "  project_cli.py --compare 12 31 --verbose\n"
+            "  project_cli.py --compare rand --nodes custom-nodes.tsv --edges custom-edges.tsv\n\n"
+            "Choose a dataset with --data tiny|small|medium (default: tiny), or "
+            "provide both --nodes and --edges."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--nodes", type=Path, default=DEFAULT_INSTANCE / "nodes.tsv",
-                        help="path to the input nodes TSV file (legacy queries default to the tiny instance)")
-    parser.add_argument("--edges", type=Path, default=DEFAULT_INSTANCE / "edges.tsv",
-                        help="path to the input edges TSV file (legacy queries default to the tiny instance)")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument(
+        "--find", nargs="+", metavar="NODE",
+        help="find a path for U V, or use 'rand' to choose two distinct nodes",
+    )
+    modes.add_argument(
+        "--compare", nargs="+", metavar="NODE",
+        help="compare Dijkstra and CH for U V, or use 'rand' for two distinct nodes",
+    )
+    parser.add_argument("--nodes", type=Path, help="custom nodes TSV (requires --edges)")
+    parser.add_argument("--edges", type=Path, help="custom edges TSV (requires --nodes)")
     parser.add_argument(
-        "--data", choices=("TINY", "SMALL", "MEDIUM"), metavar="DATASET",
-        help="select a bundled dataset (TINY, SMALL, or MEDIUM); planned to resolve its nodes.tsv and edges.tsv files",
+        "--data", type=str.lower, choices=DATASETS,
+        help="bundled dataset: tiny, small, or medium (default: tiny)",
     )
     parser.add_argument(
-        "--query", choices=("evac", "apsp", "critical"),
-        help="run a legacy query: evac assigns zones to shelters, apsp prints all-pairs distances, or critical finds the critical road",
+        "--algo", choices=("dijkstra", "ch"),
+        help="algorithm for --find: dijkstra or ch (default: ch); --compare always runs both",
     )
-    parser.add_argument(
-        "--find", nargs="+", metavar="U/V",
-        help="find a shortest path between node IDs U and V, or pass the single value 'rand' to choose a random pair",
-    )
-    parser.add_argument("--close", nargs=2, type=int, metavar=("U", "V"),
-                        help="show evacuation results with directed edge U->V closed")
-    parser.add_argument(
-        "--algo",
-        choices=sorted(APSP_ALGORITHMS | {"ch"}),
-        help="path algorithm for --find (ch or dijkstra; planned default: ch), or APSP algorithm for --query apsp (dijkstra, bellman-ford, johnson, or floyd-warshall)",
-    )
-    parser.add_argument("--counters", action="store_true", help="write operation counts to counters.txt")
     parser.add_argument(
         "--verbose", action="store_true",
-        help="print the path search summary and metrics (relaxations, priority-queue operations, preprocessing time, and query time)",
+        help="print progress from the selected algorithm(s) and metrics to stderr",
     )
     parser.add_argument(
-        "--compare", action="store_true",
-        help="run both Contraction Hierarchies and Dijkstra for --find, print both results and metrics, and report the winner",
+        "--counters", action="store_true",
+        help="write operation, timing, and graph-size counters to counters.txt",
     )
     return parser
+
+
+def _resolve_pair(spec: list[str] | None, parser: argparse.ArgumentParser) -> tuple[int, int] | None:
+    if spec is None:
+        parser.error(
+            "you must specify a path to find with --find U V or --compare U V, "
+            "or pass --find rand / --compare rand for a random pair"
+        )
+    if len(spec) == 1 and spec[0].lower() == "rand":
+        return None
+    if len(spec) != 2:
+        parser.error("provide exactly two node IDs, or the single value 'rand'")
+    try:
+        return int(spec[0]), int(spec[1])
+    except ValueError:
+        parser.error("node IDs must be integers; use 'rand' for a random pair")
+
+
+def _write_counters(counter: Counters) -> None:
+    Path.cwd().joinpath("counters.txt").write_text(
+        f"Relaxations\t{counter.relaxations}\n"
+        f"Nodes_Settled\t{counter.nodes_settled}\n"
+        f"PQ_Ops\t{counter.pq_ops}\n"
+        f"Preprocessing_Time_Seconds\t{counter.preprocessing_time:.6f}\n"
+        f"Query_Time_Seconds\t{counter.query_time:.6f}\n"
+        f"Original_Directed_Edges\t{counter.original_edges}\n"
+        f"CH_Shortcuts\t{counter.ch_shortcuts}\n"
+        f"CH_Stored_Edges\t{counter.ch_edges}\n"
+        f"CH_Query_Graph_Edges\t{counter.ch_query_edges}\n",
+        encoding="utf-8",
+    )
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
-    if args.query is None and args.find is None:
-        parser.error("specify either --query or --find")
-    if args.query is not None and args.find is not None:
-        parser.error("--query and --find cannot be used together")
-    if args.compare and args.find is None:
-        parser.error("--compare is only applicable to --find")
-    if args.find is not None:
-        # TODO: Validate the --find shape (two node IDs or the single token 'rand'),
-        # choose/validate the dataset, and route this mode to the CH/Dijkstra flow.
-        parser.error("--find execution is not implemented yet")
-    if args.data is not None:
-        # TODO: Resolve --data to its bundled nodes.tsv and edges.tsv paths.
-        pass
-    if args.algo is not None and args.query != "apsp":
-        parser.error("--algo is only applicable to --query apsp")
-    if args.close is not None and args.query != "evac":
-        parser.error("--close is only applicable to --query evac")
+    if args.find is None and args.compare is None:
+        parser.error(
+            "choose a path to find: use --find U V (or --find rand) or "
+            "--compare U V (or --compare rand)"
+        )
+    if args.algo is not None and args.compare is not None:
+        parser.error("--algo applies only to --find; --compare always runs both algorithms")
+    if (args.nodes is None) != (args.edges is None):
+        parser.error("provide both --nodes and --edges together")
+    if args.data is not None and args.nodes is not None:
+        parser.error("choose either --data or the --nodes/--edges pair")
 
+    pair_spec = args.find if args.find is not None else args.compare
+    pair = _resolve_pair(pair_spec, parser)
     try:
-        # TODO: Once --data and explicit --nodes/--edges are supported together,
-        # validate their precedence and report missing or invalid input paths here.
-        network = RoadNetwork.load(args.nodes, args.edges)
-        counter = Counters()
+        network = resolve_network(args.data, args.nodes, args.edges)
+        if pair is None:
+            if len(network.nodes) < 2:
+                parser.error("a random path requires a dataset with at least two nodes")
+            pair = tuple(random.sample(sorted(network.nodes), 2))
+        source, target = pair
+        if source not in network.nodes:
+            parser.error(f"source node {source} does not exist in this dataset")
+        if target not in network.nodes:
+            parser.error(f"target node {target} does not exist in this dataset")
 
-        if args.query == "evac":
-            excluded_arcs = frozenset()
-            if args.close is not None:
-                road = network.find_road(*args.close)
-                excluded_arcs = frozenset({(road.id, *args.close)})
-            for row in evacuations(network, excluded_arcs=excluded_arcs, counters=counter):
-                shelter = "NONE" if row.shelter_id is None else network.nodes[row.shelter_id].name
-                print(
-                    f"{network.nodes[row.zone_id].name}\t{shelter}\t"
-                    f"{_format_distance(row.minutes)}"
-                )
-        elif args.query == "apsp":
-            distances = all_pairs(network, algorithm=args.algo or "dijkstra", counter=counter)
-            for source in sorted(distances):
-                for target in sorted(distances[source]):
-                    if source != target:
-                        print(
-                            f"{source}\t{target}\t"
-                            f"{_format_distance(distances[source][target])}"
-                        )
-        else:
-            result = critical_closure(network, counter=counter)
-            if result is None:
-                print("NONE")
-            else:
-                print(f"{result.u}\t{result.v}\t{_format_distance(result.worst_minutes)}")
-
-        if args.counters:
-            counters_path = Path.cwd() / "counters.txt"
-            counters_path.write_text(
-                f"Relaxations\t{counter.relaxations}\nPQ_Ops\t{counter.pq_ops}\n",
-                encoding="utf-8",
-            )
         if args.verbose:
-            print(
-                f"V={len(network.nodes)} roads={len(network.roads)} "
-                f"arcs={sum(map(len, network.adjacency().values()))} "
-                f"relaxations={counter.relaxations} PQ_Ops={counter.pq_ops}",
-                file=sys.stderr,
+            print(f"Loaded {len(network.nodes)} nodes and {len(network.roads)} roads; route {source} -> {target}", file=sys.stderr)
+        if args.find is not None:
+            counter = Counters(verbose=args.verbose)
+            result = (
+                find_path_dijkstra(network, source, target, counter)
+                if args.algo == "dijkstra"
+                else find_path_ch(network, source, target, counter)
             )
+            print(format_path_result(result))
+            counters = [counter]
+        else:
+            comparison = compare_algorithms(
+                network, source, target,
+                ch=ContractionHierarchy(network),
+                verbose=args.verbose,
+            )
+            print(format_comparison(comparison))
+            counters = [comparison.dijkstra.counters, comparison.ch.counters]
+        if args.counters:
+            aggregate = Counters()
+            for counter in counters:
+                aggregate.add(counter)
+            _write_counters(aggregate)
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
     return 0

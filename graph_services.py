@@ -6,6 +6,7 @@ from graph import Graph
 from road_network import RoadNetwork
 from time import perf_counter
 from pathlib import Path
+import sys
 from contraction_hierarchies import ContractionHierarchy
 from pathlib import Path
 
@@ -23,12 +24,22 @@ class Counters:
     preprocessing_time: float = 0.0
     query_time: float = 0.0
     pq_ops: int = 0
+    original_edges: int = 0
+    ch_shortcuts: int = 0
+    ch_edges: int = 0
+    ch_query_edges: int = 0
+    verbose: bool = False
     stop_event: Event | None = None 
 
     def check_timeout(self) -> None:
         """Raises TimeoutError if the stop event has been triggered."""
         if self.stop_event is not None and self.stop_event.is_set():
             raise TimeoutError("experiment run reached its stop limit")
+
+    def progress(self, message: str) -> None:
+        """Print algorithm progress when verbose mode is enabled."""
+        if self.verbose:
+            print(message, file=sys.stderr, flush=True)
 
     def add(self, other: Counters) -> None:
         """Combines metrics from another Counters instance into this one."""
@@ -37,6 +48,10 @@ class Counters:
         self.preprocessing_time += other.preprocessing_time
         self.query_time += other.query_time
         self.pq_ops += other.pq_ops
+        self.original_edges = max(self.original_edges, other.original_edges)
+        self.ch_shortcuts = max(self.ch_shortcuts, other.ch_shortcuts)
+        self.ch_edges = max(self.ch_edges, other.ch_edges)
+        self.ch_query_edges = max(self.ch_query_edges, other.ch_query_edges)
 
 
 def _dijkstra_graph(network: RoadNetwork, *, reverse: bool = False, excluded_road_ids: frozenset[int] = frozenset(), excluded_arcs: frozenset[tuple[int, int, int]] = frozenset()) -> tuple[Graph, dict[tuple[int, int, int], int]]:
@@ -119,6 +134,7 @@ def find_path_dijkstra(
     _validate_nodes(network, u, v)
     active_counter = counter if counter is not None else Counters()
     graph, _ = _dijkstra_graph(network)
+    active_counter.original_edges = graph.get_num_edges()
 
     start = perf_counter()
     distances, parents = graph.dijkstra(u, counter=active_counter)
@@ -162,10 +178,11 @@ def compare_algorithms(
     u: int,
     v: int,
     ch: ContractionHierarchy | None = None,
+    verbose: bool = False,
 ) -> ComparisonResult:
     """Run both Dijkstra and CH on (u, v), verify cost agreement, and pick a winner."""
-    d_res = find_path_dijkstra(network, u, v)
-    ch_res = find_path_ch(network, u, v, ch=ch)
+    d_res = find_path_dijkstra(network, u, v, counter=Counters(verbose=verbose))
+    ch_res = find_path_ch(network, u, v, counter=Counters(verbose=verbose), ch=ch)
     distances_match = d_res.cost == ch_res.cost
 
     # Select winner by query performance: fewer nodes settled, then fewer relaxations, then faster query time
@@ -214,6 +231,10 @@ def format_path_result(result: PathResult) -> str:
         f"Relaxations:        {c.relaxations}\n"
         f"PQ Ops:             {c.pq_ops}\n"
         f"Preprocessing Time: {c.preprocessing_time:.6f}s\n"
+        f"Original Edges:     {c.original_edges}\n"
+        f"CH Shortcuts:       {c.ch_shortcuts}\n"
+        f"CH Stored Edges:    {c.ch_edges}\n"
+        f"CH Query Edges:     {c.ch_query_edges}\n"
         f"Query Time:         {c.query_time:.6f}s"
     )
 
