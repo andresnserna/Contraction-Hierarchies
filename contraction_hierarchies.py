@@ -67,6 +67,8 @@ class ContractionHierarchy:
     def preprocess(self, counter: Counters | None = None) -> None:
         """Build the node hierarchy, shortcuts, and upward query graphs."""
         start_time = perf_counter()
+        if counter is not None:
+            counter.progress(f"CH: preprocessing started for {len(self.network.nodes)} nodes.")
         
         self._build_contracted_graph()
         self.rank.clear()
@@ -76,12 +78,25 @@ class ContractionHierarchy:
 
         for rank, node_id in enumerate(self.node_order):
             self._contract_node(node_id, rank, counter=counter)
+            if counter is not None and (rank + 1) % 1000 == 0:
+                counter.progress(f"CH: contracted {rank + 1}/{len(self.node_order)} nodes.")
 
         self._build_upward_graphs()
         self.is_preprocessed = True
         
         if counter is not None:
             counter.preprocessing_time += (perf_counter() - start_time)
+            counter.original_edges = sum(map(len, self.network.adjacency().values()))
+            counter.ch_shortcuts = self.shortcuts_added
+            counter.ch_edges = sum(map(len, self.contracted_graph.values()))
+            counter.ch_query_edges = (
+                sum(map(len, self.forward_upward.values()))
+                + sum(map(len, self.downward_graph.values()))
+            )
+            counter.progress(
+                f"CH: preprocessing finished; {self.shortcuts_added} shortcuts, "
+                f"{counter.ch_query_edges} query-graph edges."
+            )
 
     def order_nodes(self, counter: Counters | None = None) -> list[int]:
         """Sort nodes by outgoing degree minus incoming degree in the road graph."""
@@ -276,6 +291,8 @@ class ContractionHierarchy:
     ) -> tuple[float, list[int] | None]:
         """Return shortest distance and node path, or (inf, None) if unreachable."""
         start_time = perf_counter()
+        if counter is not None:
+            counter.progress(f"CH: query started from {source} to {target}.")
         
         if source not in self.network.nodes or target not in self.network.nodes:
             raise ValueError("Illegal node entered")
@@ -287,6 +304,8 @@ class ContractionHierarchy:
                 counter.query_time += (perf_counter() - start_time)
             return 0, [source]
             
+        if counter is not None:
+            counter.progress("CH: searching upward from the source.")
         forward_dist, forward_parent = self._upward_search(
             source, self.forward_upward, counter
         )
@@ -299,6 +318,8 @@ class ContractionHierarchy:
                     edge_target, edge_source, edge.weight,
                     edge.middle_node, edge.left, edge.right,
                 )
+        if counter is not None:
+            counter.progress("CH: searching upward from the target on reversed downward edges.")
         backward_dist, backward_parent = self._upward_search(
             target, reverse_downward, counter
         )
@@ -338,6 +359,7 @@ class ContractionHierarchy:
             
         if counter is not None:
             counter.query_time += (perf_counter() - start_time)
+            counter.progress(f"CH: query finished; settled {counter.nodes_settled} nodes.")
             
         return distance, path
 
