@@ -1,4 +1,4 @@
-# Graphs as Networks — CLI Guide
+# Contraction Hierarchies — CLI Guide
 
 This project models a road network as a directed, weighted graph and answers evacuation, all-pairs travel-time, and critical-road-closure queries. The command-line program is `Graphs as Networks/project_cli.py`.
 
