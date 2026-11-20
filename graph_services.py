@@ -2,10 +2,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import inf
 from threading import Event
-from Floyd_Warshall import Weighted_Graph, floyd_warshall
 from graph import Graph
 from road_network import RoadNetwork
 from time import perf_counter
+from pathlib import Path
+from contraction_hierarchies import ContractionHierarchy
+from pathlib import Path
+
+INSTANCES_DIR = Path(__file__).parent / "data" / "instances"
 
 
 @dataclass
@@ -54,7 +58,172 @@ def _dijkstra_graph(network: RoadNetwork, *, reverse: bool = False, excluded_roa
 
     return graph, road_ids
 
-# TODO: Add find_path_ch(network, u, v, counter) and find_path_dijkstra(...)
-# here; both should return a consistent path/cost/metrics result for formatting.
-# TODO: Add compare_algorithms(network, u, v, ...) here to run both algorithms
-# and select a winner using the cost and operation metrics described in the plan.
+
+@dataclass(frozen=True)
+class PathResult:
+    """Shared result format returned by both Dijkstra and CH path searches."""
+
+    algorithm: str
+    source: int
+    target: int
+    cost: float
+    path: list[int] | None
+    counters: Counters
+
+
+@dataclass(frozen=True)
+class ComparisonResult:
+    """Side-by-side comparison of Dijkstra and CH on the same query."""
+
+    dijkstra: PathResult
+    ch: PathResult
+    distances_match: bool
+    winner: str
+    reason: str
+
+
+def resolve_network(
+    dataset: str | None = None,
+    nodes_path: str | Path | None = None,
+    edges_path: str | Path | None = None,
+) -> RoadNetwork:
+    """Load a RoadNetwork from either a named dataset or explicit TSV file paths."""
+    if nodes_path is not None or edges_path is not None:
+        if nodes_path is None or edges_path is None:
+            raise ValueError("Both --nodes and --edges must be provided together.")
+        return RoadNetwork.load(Path(nodes_path), Path(edges_path))
+
+    name = dataset or "tiny"
+    instance_dir = INSTANCES_DIR / name
+    if not instance_dir.exists():
+        raise ValueError(f"Unknown dataset '{name}'. Available: tiny, small, medium")
+
+    return RoadNetwork.load(instance_dir / "nodes.tsv", instance_dir / "edges.tsv")
+
+
+def _validate_nodes(network: RoadNetwork, u: int, v: int) -> None:
+    """Raise a clear error if either endpoint is missing from the network."""
+    if u not in network.nodes:
+        raise ValueError(f"Source node {u} does not exist in this network.")
+    if v not in network.nodes:
+        raise ValueError(f"Target node {v} does not exist in this network.")
+
+
+def find_path_dijkstra(
+    network: RoadNetwork,
+    u: int,
+    v: int,
+    counter: Counters | None = None,
+) -> PathResult:
+    """Run Dijkstra's algorithm from u to v and return a unified PathResult."""
+    _validate_nodes(network, u, v)
+    active_counter = counter if counter is not None else Counters()
+    graph, _ = _dijkstra_graph(network)
+
+    start = perf_counter()
+    distances, parents = graph.dijkstra(u, counter=active_counter)
+    active_counter.query_time += perf_counter() - start
+
+    cost = distances[v]
+    if cost == inf:
+        return PathResult("dijkstra", u, v, inf, None, active_counter)
+
+    path: list[int] = []
+    current: int | None = v
+    while current is not None:
+        path.append(current)
+        current = parents[current]
+    path.reverse()
+
+    return PathResult("dijkstra", u, v, cost, path, active_counter)
+
+
+def find_path_ch(
+    network: RoadNetwork,
+    u: int,
+    v: int,
+    counter: Counters | None = None,
+    ch: ContractionHierarchy | None = None,
+) -> PathResult:
+    """Run Contraction Hierarchies from u to v and return a unified PathResult."""
+    _validate_nodes(network, u, v)
+    active_counter = counter if counter is not None else Counters()
+
+    hierarchy = ch if ch is not None else ContractionHierarchy(network)
+    if not hierarchy.is_preprocessed:
+        hierarchy.preprocess(counter=active_counter)
+
+    cost, path = hierarchy.shortest_path(u, v, counter=active_counter)
+    return PathResult("ch", u, v, cost, path, active_counter)
+
+
+def compare_algorithms(
+    network: RoadNetwork,
+    u: int,
+    v: int,
+    ch: ContractionHierarchy | None = None,
+) -> ComparisonResult:
+    """Run both Dijkstra and CH on (u, v), verify cost agreement, and pick a winner."""
+    d_res = find_path_dijkstra(network, u, v)
+    ch_res = find_path_ch(network, u, v, ch=ch)
+    distances_match = d_res.cost == ch_res.cost
+
+    # Select winner by query performance: fewer nodes settled, then fewer relaxations, then faster query time
+    d_score = (d_res.counters.nodes_settled, d_res.counters.relaxations, d_res.counters.query_time)
+    ch_score = (ch_res.counters.nodes_settled, ch_res.counters.relaxations, ch_res.counters.query_time)
+
+    if not distances_match:
+        winner = "none"
+        reason = f"distance mismatch (Dijkstra={d_res.cost}, CH={ch_res.cost})"
+    elif ch_score < d_score:
+        winner = "ch"
+        reason = (
+            f"fewer query operations ({ch_res.counters.nodes_settled} vs "
+            f"{d_res.counters.nodes_settled} nodes settled)"
+        )
+    elif d_score < ch_score:
+        winner = "dijkstra"
+        reason = (
+            f"fewer query operations ({d_res.counters.nodes_settled} vs "
+            f"{ch_res.counters.nodes_settled} nodes settled)"
+        )
+    else:
+        winner = "tie"
+        reason = "identical query operations and time"
+
+    return ComparisonResult(
+        dijkstra=d_res,
+        ch=ch_res,
+        distances_match=distances_match,
+        winner=winner,
+        reason=reason,
+    )
+
+
+def format_path_result(result: PathResult) -> str:
+    """Format a single PathResult and its metrics for CLI output."""
+    cost_str = "INF" if result.cost == inf else str(result.cost)
+    path_str = "NONE (unreachable)" if result.path is None else " -> ".join(map(str, result.path))
+    c = result.counters
+    return (
+        f"Algorithm:          {result.algorithm}\n"
+        f"Route:              {result.source} -> {result.target}\n"
+        f"Cost:               {cost_str}\n"
+        f"Path:               {path_str}\n"
+        f"Nodes Settled:      {c.nodes_settled}\n"
+        f"Relaxations:        {c.relaxations}\n"
+        f"PQ Ops:             {c.pq_ops}\n"
+        f"Preprocessing Time: {c.preprocessing_time:.6f}s\n"
+        f"Query Time:         {c.query_time:.6f}s"
+    )
+
+
+def format_comparison(comp: ComparisonResult) -> str:
+    """Format a side-by-side comparison of Dijkstra and CH."""
+    match_str = "MATCH" if comp.distances_match else "MISMATCH"
+    return (
+        f"=== Dijkstra ===\n{format_path_result(comp.dijkstra)}\n\n"
+        f"=== Contraction Hierarchies ===\n{format_path_result(comp.ch)}\n\n"
+        f"Cost Agreement: {match_str}\n"
+        f"Winner:         {comp.winner} ({comp.reason})"
+    )
