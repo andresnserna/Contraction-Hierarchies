@@ -93,46 +93,60 @@ def xml_to_tsv(path, output_dir=None, weight_attribute="distance"):
     parallel edges retain the minimum weight and self-loops are omitted.
     By default, output goes in a folder named after the XML file.
     These are distance graph tables, not the evacuation CLI's minutes/capacity
-    input format. Return the two output Paths.
+    input format. Return the two output Paths. Skip existing output files;
+    if both exist, return without parsing the XML. If only one exists,
+    parse once to create the missing file and keep the existing file intact.
     """
     source = Path(path)
-    graph = load_graph_xml(source, weight_attribute)
     destination = source.with_suffix("") if output_dir is None else Path(output_dir)
-    destination.mkdir(parents=True, exist_ok=True)
     nodes_path = destination / "node.tsv"
     edges_path = destination / "edges.tsv"
 
-    # Exclusive creation protects previous exports from being overwritten.
-    if nodes_path.exists() or edges_path.exists():
-        raise FileExistsError(f"TSV output already exists in {destination}")
-    with nodes_path.open("x", newline="", encoding="utf-8") as nodes_file:
-        writer = csv.writer(nodes_file, delimiter="\t")
-        writer.writerow(["id"])
-        for node in graph.nodes:
-            writer.writerow([node])
-    with edges_path.open("x", newline="", encoding="utf-8") as edges_file:
-        writer = csv.writer(edges_file, delimiter="\t")
-        writer.writerow(["u", "v", weight_attribute])
-        for source_node, neighbors in graph.nodes.items():
-            for target_node, weight in neighbors.items():
-                writer.writerow([source_node, target_node, weight])
+    for output_path in (nodes_path, edges_path):
+        if output_path.is_file():
+            print(f"Skipping existing {output_path}", flush=True)
+    if nodes_path.is_file() and edges_path.is_file():
+        return nodes_path, edges_path
+
+    print(f"Converting {source}...", flush=True)
+    graph = load_graph_xml(source, weight_attribute)
+    destination.mkdir(parents=True, exist_ok=True)
+    # Exclusive creation also protects against another process creating a file.
+    if not nodes_path.is_file():
+        with nodes_path.open("x", newline="", encoding="utf-8") as nodes_file:
+            writer = csv.writer(nodes_file, delimiter="\t")
+            writer.writerow(["id"])
+            for node in graph.nodes:
+                writer.writerow([node])
+    if not edges_path.is_file():
+        with edges_path.open("x", newline="", encoding="utf-8") as edges_file:
+            writer = csv.writer(edges_file, delimiter="\t")
+            writer.writerow(["u", "v", weight_attribute])
+            for source_node, neighbors in graph.nodes.items():
+                for target_node, weight in neighbors.items():
+                    writer.writerow([source_node, target_node, weight])
     return nodes_path, edges_path
 
 
 def decompress_graph(path, output_dir=None):
     """Save a .xml.zst file as .xml, keeping the compressed original.
 
-    Return the saved Path. Existing output files are never overwritten.
+    Return the saved Path. If it already exists, skip decompression without
+    opening the source or importing zstandard. Existing files are not verified.
     """
-    import zstandard as zstd
-
     source = Path(path)
     if not source.name.endswith(".xml.zst"):
         raise ValueError("Expected a .xml.zst file")
 
     destination_dir = source.parent if output_dir is None else Path(output_dir)
-    destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / source.with_suffix("").name
+    if destination.is_file():
+        print(f"Skipping existing {destination}", flush=True)
+        return destination
+
+    import zstandard as zstd
+
+    destination_dir.mkdir(parents=True, exist_ok=True)
 
     with source.open("rb") as compressed:
         with destination.open("xb") as output:
@@ -184,6 +198,5 @@ if __name__ == "__main__":
             destination = args.output_dir
             if destination is not None and args.path.is_dir():
                 destination = destination / source.stem
-            print(f"Converting {source}...", flush=True)
             for saved_path in xml_to_tsv(source, destination, args.weight):
                 print(saved_path)

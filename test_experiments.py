@@ -7,13 +7,13 @@ from unittest.mock import patch
 
 import experiments as exp
 from graph import Graph
-from graph_services import ComparisonResult, compare_algorithms
+from graph_services import ComparisonResult, compare_algorithms, format_comparison
 
 
 class GeneratedExperimentTests(unittest.TestCase):
     def setUp(self):
         # Inspect graph setup independently from the algorithm comparisons below.
-        patcher = patch.object(exp, "compare_graph", side_effect=lambda graph, **kwargs: graph)
+        patcher = patch.object(exp, "_run_experiment", side_effect=lambda graph, name, **kwargs: graph)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -63,7 +63,7 @@ class GeneratedExperimentTests(unittest.TestCase):
 
 class RealLifeExperimentTests(unittest.TestCase):
     def setUp(self):
-        patcher = patch.object(exp, "compare_graph", side_effect=lambda graph, **kwargs: graph)
+        patcher = patch.object(exp, "_run_experiment", side_effect=lambda graph, name, **kwargs: graph)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -118,6 +118,14 @@ class RealLifeExperimentTests(unittest.TestCase):
 
 
 class AlgorithmComparisonTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.results_dir = Path(directory.name) / "results"
+        patcher = patch.object(exp, "RESULTS_DIR", self.results_dir)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_all_generated_experiments_run_both_algorithms(self):
         cases = (
             (exp.experiment_erdos_renyi, {"probability": 0.4}),
@@ -136,6 +144,17 @@ class AlgorithmComparisonTests(unittest.TestCase):
                     self.assertEqual(result.ch.algorithm, "ch")
                     self.assertGreaterEqual(result.ch.counters.preprocessing_time, 0)
                     self.assertGreaterEqual(result.dijkstra.counters.query_time, 0)
+                    name = function.__name__.removeprefix("experiment_")
+                    reports = list(self.results_dir.glob(f"{name}_*.txt"))
+                    self.assertEqual(len(reports), 2 if directed else 1)
+                    report = max(reports, key=lambda path: path.name).read_text()
+                    self.assertIn(format_comparison(result), report)
+                    self.assertIn("n: 4\n", report)
+                    self.assertIn(f"directed: {directed}\n", report)
+                    if "probability" in kwargs:
+                        self.assertIn("probability: 0.4\n", report)
+                    if "degree" in kwargs:
+                        self.assertIn("degree: 2\n", report)
 
     def test_conversion_preserves_fractional_asymmetric_and_zero_costs(self):
         graph = Graph()
@@ -176,6 +195,26 @@ class AlgorithmComparisonTests(unittest.TestCase):
                 self.assertTrue(result.distances_match)
                 self.assertEqual(result.ch.cost, 2.5)
                 self.assertEqual(result.dijkstra.path, [0, 1])
+                report_name = function.__name__.removeprefix("experiment_")
+                reports = list(self.results_dir.glob(f"{report_name}_*.txt"))
+                self.assertEqual(len(reports), 1)
+                report = reports[0].read_text()
+                self.assertIn(format_comparison(result), report)
+                self.assertIn(f"dataset: {name}\n", report)
+                self.assertIn("source_label: n0\n", report)
+                self.assertIn("target_label: n1\n", report)
+
+    def test_custom_output_directory_retains_repeated_runs(self):
+        output_dir = self.results_dir / "custom" / "paths"
+        first = exp.experiment_path_graph(3, seed=7, output_dir=output_dir)
+        first_path, = output_dir.glob("*.txt")
+        original = first_path.read_text()
+        second = exp.experiment_path_graph(3, seed=7, output_dir=output_dir)
+        self.assertEqual(len(list(output_dir.glob("*.txt"))), 2)
+        self.assertEqual(first_path.read_text(), original)
+        self.assertIn(format_comparison(first), original)
+        self.assertEqual(first.dijkstra.cost, second.dijkstra.cost)
+        self.assertEqual(list(self.results_dir.glob("*.txt")), [])
 
     def test_unreachable_singleton_empty_and_invalid_endpoints(self):
         result = exp.experiment_path_graph(4, directed=True, source=3, target=0)

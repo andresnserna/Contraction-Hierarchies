@@ -1,22 +1,58 @@
-"""Experiment runners for the graph query performance study."""
+"""Compare routing algorithms and save each experiment to a unique text file.
+
+All experiment_* functions return ComparisonResult and write to RESULTS_DIR
+by default. Pass output_dir to select another destination. Files include the
+experiment parameters and formatted metrics, and repeated runs are retained.
+"""
 
 from __future__ import annotations
 
 import csv
 import math
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event, Thread
 from time import perf_counter
 from typing import Callable, TypeVar
+from uuid import uuid4
 
 from data import gen_graphs
 from graph import Graph
-from graph_services import ComparisonResult, Counters, compare_algorithms
+from graph_services import ComparisonResult, Counters, compare_algorithms, format_comparison
 from road_network import Node, Road, RoadNetwork
 
 T = TypeVar("T")
 REAL_LIFE_DIR = Path(__file__).resolve().parent / "data" / "real-life-examples"
+RESULTS_DIR = Path(__file__).resolve().parent / "results"
+# Change this name before running main() to separate each teammate's results.
+TEAMMATE_NAME = "Josh"
+
+
+def save_comparison(result, experiment_name, *, output_dir=None, parameters=None) -> Path:
+    """Save settings and comparison metrics to a unique UTF-8 text file."""
+    destination = RESULTS_DIR if output_dir is None else Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    path = destination / f"{experiment_name}_{timestamp}_{uuid4().hex[:8]}.txt"
+    lines = [f"Experiment: {experiment_name}", f"Run (UTC): {timestamp}"]
+    lines.extend(f"{key}: {value}" for key, value in (parameters or {}).items())
+    lines.extend(["", format_comparison(result), ""])
+    with path.open("x", encoding="utf-8") as file:
+        file.write("\n".join(lines))
+    return path
+
+
+def _run_experiment(graph, name, *, source=None, target=None, output_dir=None, **parameters):
+    """Compare a graph, persist its report, and return the comparison."""
+    result = compare_graph(graph, source=source, target=target)
+    parameters.update(
+        nodes=graph.get_num_nodes(), arcs=graph.get_num_edges(),
+        source_label=next(iter(graph.nodes)) if source is None else source,
+        target_label=next(reversed(graph.nodes)) if target is None else target,
+    )
+    save_comparison(result, name, output_dir=output_dir, parameters=parameters)
+    return result
 
 
 def graph_to_road_network(graph: Graph) -> RoadNetwork:
@@ -76,53 +112,61 @@ def _generated_graph(generator, n, *, directed=False, seed=None, **parameters) -
 
 
 def experiment_erdos_renyi(n, probability, *, directed=False, seed=None,
-                          source=None, target=None) -> ComparisonResult:
+                          source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on n Erdos-Renyi nodes with edge probability [0, 1]."""
     if not 0 <= probability <= 1:
         raise ValueError("probability must be between 0 and 1")
     graph = _generated_graph(gen_graphs.erdos_renyi, n, p=probability,
                              directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "erdos_renyi", source=source, target=target,
+                           output_dir=output_dir, n=n, probability=probability,
+                           directed=directed, seed=seed)
 
 
-def experiment_cycle(n, *, directed=False, seed=None, source=None, target=None) -> ComparisonResult:
+def experiment_cycle(n, *, directed=False, seed=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on a weighted cycle with n nodes."""
     graph = _generated_graph(gen_graphs.cycle, n, directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "cycle", source=source, target=target,
+                           output_dir=output_dir, n=n, directed=directed, seed=seed)
 
 
-def experiment_complete_graph(n, *, directed=False, seed=None, source=None, target=None) -> ComparisonResult:
+def experiment_complete_graph(n, *, directed=False, seed=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on a complete weighted graph with n nodes."""
     graph = _generated_graph(gen_graphs.complete_graph, n, directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "complete_graph", source=source, target=target,
+                           output_dir=output_dir, n=n, directed=directed, seed=seed)
 
 
-def experiment_path_graph(n, *, directed=False, seed=None, source=None, target=None) -> ComparisonResult:
+def experiment_path_graph(n, *, directed=False, seed=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on a weighted path with n nodes."""
     graph = _generated_graph(gen_graphs.path_graph, n, directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "path_graph", source=source, target=target,
+                           output_dir=output_dir, n=n, directed=directed, seed=seed)
 
 
-def experiment_random_trees(n, *, directed=False, seed=None, source=None, target=None) -> ComparisonResult:
+def experiment_random_trees(n, *, directed=False, seed=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on a random weighted tree with n nodes."""
     graph = _generated_graph(gen_graphs.random_trees, n, directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "random_trees", source=source, target=target,
+                           output_dir=output_dir, n=n, directed=directed, seed=seed)
 
 
 def experiment_balanced_trees(n, degree=3, *, directed=False, seed=None,
-                             source=None, target=None) -> ComparisonResult:
+                             source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on a balanced n-node tree with degree children per node."""
     if isinstance(degree, bool) or not isinstance(degree, int) or degree < 1:
         raise ValueError("degree must be a positive integer")
     graph = _generated_graph(gen_graphs.balanced_trees, n, degree=degree,
                              directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "balanced_trees", source=source, target=target,
+                           output_dir=output_dir, n=n, degree=degree, directed=directed, seed=seed)
 
 
-def experiment_grid_graph(n, *, directed=False, seed=None, source=None, target=None) -> ComparisonResult:
+def experiment_grid_graph(n, *, directed=False, seed=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Compare routing on an n-by-n grid containing n squared nodes."""
     graph = _generated_graph(gen_graphs.grid_graph, n, directed=directed, seed=seed)
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "grid_graph", source=source, target=target,
+                           output_dir=output_dir, n=n, directed=directed, seed=seed)
 
 
 def load_tsv_graph(directory) -> Graph:
@@ -179,28 +223,32 @@ def load_tsv_graph(directory) -> Graph:
     return graph
 
 
-def experiment_california(*, data_dir=None, source=None, target=None) -> ComparisonResult:
+def experiment_california(*, data_dir=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Load California TSVs and compare routing using original string endpoints."""
     graph = load_tsv_graph((REAL_LIFE_DIR if data_dir is None else Path(data_dir)) / "CA")
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "california", source=source, target=target,
+                           output_dir=output_dir, dataset="CA", data_dir=REAL_LIFE_DIR if data_dir is None else data_dir)
 
 
-def experiment_new_york(*, data_dir=None, source=None, target=None) -> ComparisonResult:
+def experiment_new_york(*, data_dir=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Load New York TSVs and compare routing using original string endpoints."""
     graph = load_tsv_graph((REAL_LIFE_DIR if data_dir is None else Path(data_dir)) / "NY")
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "new_york", source=source, target=target,
+                           output_dir=output_dir, dataset="NY", data_dir=REAL_LIFE_DIR if data_dir is None else data_dir)
 
 
-def experiment_texas(*, data_dir=None, source=None, target=None) -> ComparisonResult:
+def experiment_texas(*, data_dir=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Load Texas TSVs and compare routing using original string endpoints."""
     graph = load_tsv_graph((REAL_LIFE_DIR if data_dir is None else Path(data_dir)) / "TX")
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "texas", source=source, target=target,
+                           output_dir=output_dir, dataset="TX", data_dir=REAL_LIFE_DIR if data_dir is None else data_dir)
 
 
-def experiment_merged(*, data_dir=None, source=None, target=None) -> ComparisonResult:
+def experiment_merged(*, data_dir=None, source=None, target=None, output_dir=None) -> ComparisonResult:
     """Load merged TSVs and compare routing using original string endpoints."""
     graph = load_tsv_graph((REAL_LIFE_DIR if data_dir is None else Path(data_dir)) / "merged")
-    return compare_graph(graph, source=source, target=target)
+    return _run_experiment(graph, "merged", source=source, target=target,
+                           output_dir=output_dir, dataset="merged", data_dir=REAL_LIFE_DIR if data_dir is None else data_dir)
 
 
 @dataclass(frozen=True)
@@ -278,7 +326,25 @@ def with_stop(counters: Counters, stop_event: Event) -> Counters:
 
 
 def main() -> None:
-    pass
+    """Run all experiments in data/results/<function name>_<TEAMMATE_NAME>."""
+    output_root = Path(__file__).resolve().parent / "data" / "results"
+    n = 100
+    probability = 0.1
+    degree = 3
+    grid_size = 10  # A 10-by-10 grid has 100 nodes.
+    seed = 7
+
+    experiment_erdos_renyi(n, probability, seed=seed, output_dir=output_root / f"experiment_erdos_renyi_{TEAMMATE_NAME}")
+    experiment_cycle(n, seed=seed, output_dir=output_root / f"experiment_cycle_{TEAMMATE_NAME}")
+    experiment_complete_graph(n, seed=seed, output_dir=output_root / f"experiment_complete_graph_{TEAMMATE_NAME}")
+    experiment_path_graph(n, seed=seed, output_dir=output_root / f"experiment_path_graph_{TEAMMATE_NAME}")
+    experiment_random_trees(n, seed=seed, output_dir=output_root / f"experiment_random_trees_{TEAMMATE_NAME}")
+    experiment_balanced_trees(n, degree, seed=seed, output_dir=output_root / f"experiment_balanced_trees_{TEAMMATE_NAME}")
+    experiment_grid_graph(grid_size, seed=seed, output_dir=output_root / f"experiment_grid_graph_{TEAMMATE_NAME}")
+    experiment_california(output_dir=output_root / f"experiment_california_{TEAMMATE_NAME}")
+    experiment_new_york(output_dir=output_root / f"experiment_new_york_{TEAMMATE_NAME}")
+    experiment_texas(output_dir=output_root / f"experiment_texas_{TEAMMATE_NAME}")
+    experiment_merged(output_dir=output_root / f"experiment_merged_{TEAMMATE_NAME}")
 
 
 if __name__ == "__main__":
